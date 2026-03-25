@@ -1,4 +1,6 @@
 const STORAGE_KEY = 'cashflow-web-app:state:v2';
+const DEFAULTS_VERSION_KEY = 'cashflow-web-app:defaults-version';
+const DEFAULTS_VERSION = '20260324-v3';
 const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
@@ -44,6 +46,16 @@ function createDefaultState() {
 }
 
 function loadInitialState() {
+  try {
+    const seenDefaultsVersion = localStorage.getItem(DEFAULTS_VERSION_KEY);
+    if (seenDefaultsVersion !== DEFAULTS_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(DEFAULTS_VERSION_KEY, DEFAULTS_VERSION);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+
   const defaults = createDefaultState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
