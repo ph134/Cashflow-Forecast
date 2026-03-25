@@ -5,6 +5,9 @@ const DEFAULTS_VERSION = '20260324-v4';
 const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
+  const starterCostId = crypto.randomUUID();
+  const starterMonth = new Date().toISOString().slice(0, 7);
+
   return {
     project: {
       salesforceOpportunity: '',
@@ -16,13 +19,33 @@ function createDefaultState() {
       convertToCurrency: 'USD',
       contractFxRate: 1,
       contractRateIsManual: false,
-      projectStartMonth: '',
+      projectStartMonth: starterMonth,
       quotedLeadTimeMonths: 0,
       netDays: 0,
     },
-    milestones: [],
-    costs: [],
-    progress: {},
+    milestones: [
+      {
+        id: crypto.randomUUID(),
+        code: 'MS01',
+        label: '',
+        percent: 0,
+        invoiceMonth: starterMonth,
+      },
+    ],
+    costs: [
+      {
+        id: starterCostId,
+        label: 'Cost Element 1',
+        totalCost: 0,
+        currency: 'USD',
+        convertToCurrency: 'USD',
+        conversionRate: 1,
+        rateIsManual: false,
+      },
+    ],
+    progress: {
+      [starterCostId]: [0],
+    },
   };
 }
 
