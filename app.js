@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'cashflow-web-app:state:v1';
+const STORAGE_KEY = 'cashflow-web-app:state:v2';
 const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
