@@ -1,6 +1,7 @@
-const STORAGE_KEY = 'cashflow-web-app:state:v2';
+const STORAGE_KEY = 'cashflow-web-app:state:v3';
+const DEFAULT_STATE_KEY = 'cashflow-web-app:default-state:v1';
 const DEFAULTS_VERSION_KEY = 'cashflow-web-app:defaults-version';
-const DEFAULTS_VERSION = '20260324-v3';
+const DEFAULTS_VERSION = '20260324-v4';
 const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
@@ -45,10 +46,30 @@ function createDefaultState() {
   };
 }
 
+function getEffectiveDefaultState() {
+  const baseDefaults = createDefaultState();
+  try {
+    const raw = localStorage.getItem(DEFAULT_STATE_KEY);
+    if (!raw) return baseDefaults;
+    const custom = JSON.parse(raw);
+    return {
+      project: { ...baseDefaults.project, ...(custom?.project || {}) },
+      milestones: Array.isArray(custom?.milestones) && custom.milestones.length ? custom.milestones : baseDefaults.milestones,
+      costs: Array.isArray(custom?.costs) && custom.costs.length ? custom.costs : baseDefaults.costs,
+      progress: custom?.progress && typeof custom.progress === 'object' ? custom.progress : baseDefaults.progress,
+    };
+  } catch {
+    return baseDefaults;
+  }
+}
+
 function loadInitialState() {
   try {
     const seenDefaultsVersion = localStorage.getItem(DEFAULTS_VERSION_KEY);
     if (seenDefaultsVersion !== DEFAULTS_VERSION) {
+      localStorage.removeItem('cashflow-web-app:state:v1');
+      localStorage.removeItem('cashflow-web-app:state:v2');
+      localStorage.removeItem('cashflow-web-app:state:v3');
       localStorage.removeItem(STORAGE_KEY);
       localStorage.setItem(DEFAULTS_VERSION_KEY, DEFAULTS_VERSION);
     }
@@ -56,7 +77,7 @@ function loadInitialState() {
     // Ignore storage errors
   }
 
-  const defaults = createDefaultState();
+  const defaults = getEffectiveDefaultState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaults;
@@ -109,6 +130,7 @@ const dom = {
   exportPptBtn: document.querySelector('#exportPptBtn'),
   exportXlsBtn: document.querySelector('#exportXlsBtn'),
   importXlsBtn: document.querySelector('#importXlsBtn'),
+  setDefaultsBtn: document.querySelector('#setDefaultsBtn'),
   saveSnapshotBtn: document.querySelector('#saveSnapshotBtn'),
   loadSnapshotBtn: document.querySelector('#loadSnapshotBtn'),
   resetDefaultsBtn: document.querySelector('#resetDefaultsBtn'),
@@ -227,8 +249,32 @@ function resetToDefaults() {
   if (!window.confirm('Reset all data to current default values? This cannot be undone.')) {
     return;
   }
+  try {
+    localStorage.removeItem('cashflow-web-app:state:v1');
+    localStorage.removeItem('cashflow-web-app:state:v2');
+    localStorage.removeItem('cashflow-web-app:state:v3');
+    localStorage.removeItem(DEFAULT_STATE_KEY);
+    localStorage.setItem(DEFAULTS_VERSION_KEY, DEFAULTS_VERSION);
+  } catch {
+    // Ignore storage errors
+  }
   const defaults = createDefaultState();
   applyState(defaults);
+}
+
+function saveCurrentAsDefault() {
+  try {
+    const snapshot = {
+      project: { ...state.project },
+      milestones: state.milestones.map((milestone) => ({ ...milestone })),
+      costs: state.costs.map((cost) => ({ ...cost })),
+      progress: JSON.parse(JSON.stringify(state.progress || {})),
+    };
+    localStorage.setItem(DEFAULT_STATE_KEY, JSON.stringify(snapshot));
+    window.alert('Current values saved as local defaults.');
+  } catch {
+    window.alert('Could not save defaults in this browser session.');
+  }
 }
 
 function getHorizonMonths() {
@@ -1944,6 +1990,12 @@ if (dom.loadSnapshotBtn) {
 if (dom.resetDefaultsBtn) {
   dom.resetDefaultsBtn.addEventListener('click', () => {
     resetToDefaults();
+  });
+}
+
+if (dom.setDefaultsBtn) {
+  dom.setDefaultsBtn.addEventListener('click', () => {
+    saveCurrentAsDefault();
   });
 }
 
