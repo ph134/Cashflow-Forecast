@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'cashflow-web-app:state:v1';
+const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
   const engineerId = crypto.randomUUID();
@@ -96,11 +97,127 @@ const dom = {
   exportPptBtn: document.querySelector('#exportPptBtn'),
   exportXlsBtn: document.querySelector('#exportXlsBtn'),
   importXlsBtn: document.querySelector('#importXlsBtn'),
+  saveSnapshotBtn: document.querySelector('#saveSnapshotBtn'),
+  loadSnapshotBtn: document.querySelector('#loadSnapshotBtn'),
+  resetDefaultsBtn: document.querySelector('#resetDefaultsBtn'),
   cashflowEstimate: document.querySelector('#cashflowEstimate'),
   userGuideBtn: document.querySelector('#userGuideBtn'),
   userGuideModal: document.querySelector('#userGuideModal'),
   closeGuideBtn: document.querySelector('#closeGuideBtn'),
 };
+
+function cloneStateForSnapshot(source) {
+  return {
+    project: { ...(source?.project || {}) },
+    milestones: Array.isArray(source?.milestones) ? source.milestones.map((milestone) => ({ ...milestone })) : [],
+    costs: Array.isArray(source?.costs) ? source.costs.map((cost) => ({ ...cost })) : [],
+    progress: source?.progress && typeof source.progress === 'object' ? JSON.parse(JSON.stringify(source.progress)) : {},
+  };
+}
+
+function normalizeImportedState(rawState) {
+  const defaults = createDefaultState();
+  const normalizedProject = { ...defaults.project, ...(rawState?.project || {}) };
+
+  const normalizedMilestones = Array.isArray(rawState?.milestones) && rawState.milestones.length
+    ? rawState.milestones.map((milestone, index) => ({
+      id: String(milestone?.id || crypto.randomUUID()),
+      code: String(milestone?.code || `MS${String(index + 1).padStart(2, '0')}`),
+      label: String(milestone?.label || 'Milestone'),
+      percent: clampPercent(milestone?.percent),
+      invoiceMonth: String(milestone?.invoiceMonth || normalizedProject.projectStartMonth),
+    }))
+    : defaults.milestones;
+
+  const normalizedCosts = Array.isArray(rawState?.costs) && rawState.costs.length
+    ? rawState.costs.map((cost, index) => ({
+      id: String(cost?.id || crypto.randomUUID()),
+      label: String(cost?.label || `Cost Element ${index + 1}`),
+      totalCost: clampNumber(cost?.totalCost, 0),
+      currency: String(cost?.currency || normalizedProject.contractCurrency || 'USD').toUpperCase(),
+      convertToCurrency: String(cost?.convertToCurrency || normalizedProject.convertToCurrency || 'USD').toUpperCase(),
+      conversionRate: clampNumber(cost?.conversionRate, 1),
+      rateIsManual: Boolean(cost?.rateIsManual),
+    }))
+    : defaults.costs;
+
+  const normalizedProgress = {};
+  const sourceProgress = rawState?.progress && typeof rawState.progress === 'object' ? rawState.progress : {};
+  normalizedCosts.forEach((cost) => {
+    const rawRow = Array.isArray(sourceProgress[cost.id]) ? sourceProgress[cost.id] : [];
+    normalizedProgress[cost.id] = normalizeProgressRow(rawRow.map((value) => clampPercent(value)));
+  });
+
+  return {
+    project: normalizedProject,
+    milestones: normalizedMilestones,
+    costs: normalizedCosts,
+    progress: normalizedProgress,
+  };
+}
+
+function applyState(nextState) {
+  state.project = { ...nextState.project };
+  state.milestones = nextState.milestones.map((milestone) => ({ ...milestone }));
+  state.costs = nextState.costs.map((cost) => ({ ...cost }));
+  state.progress = JSON.parse(JSON.stringify(nextState.progress || {}));
+  ensureProgressShape();
+  rerender();
+}
+
+function downloadJsonFile(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(objectUrl);
+}
+
+function saveSnapshot() {
+  const safeName = String(state.project.opportunityName || state.project.salesforceOpportunity || 'cashflow')
+    .replace(/[^a-z0-9\-_ ]/gi, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toLowerCase() || 'cashflow';
+
+  const payload = {
+    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    app: 'cashflow-web-app',
+    state: cloneStateForSnapshot(state),
+  };
+
+  downloadJsonFile(`${safeName}-snapshot.json`, payload);
+}
+
+function loadSnapshotFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const text = String(event.target?.result || '');
+      const parsed = JSON.parse(text);
+      const rawState = parsed?.state || parsed;
+      const normalized = normalizeImportedState(rawState);
+      applyState(normalized);
+      window.alert('Snapshot loaded successfully.');
+    } catch (error) {
+      window.alert(`Snapshot load failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetToDefaults() {
+  if (!window.confirm('Reset all data to current default values? This cannot be undone.')) {
+    return;
+  }
+  const defaults = createDefaultState();
+  applyState(defaults);
+}
 
 function getHorizonMonths() {
   const roundedNet = Math.round(Number(state.project.netDays || 0) / 30);
@@ -1794,6 +1911,27 @@ if (dom.importXlsBtn) {
     importFromExcel(file);
     // Reset so the same file can be re-imported if needed
     event.target.value = '';
+  });
+}
+
+if (dom.saveSnapshotBtn) {
+  dom.saveSnapshotBtn.addEventListener('click', () => {
+    saveSnapshot();
+  });
+}
+
+if (dom.loadSnapshotBtn) {
+  dom.loadSnapshotBtn.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    loadSnapshotFromFile(file);
+    event.target.value = '';
+  });
+}
+
+if (dom.resetDefaultsBtn) {
+  dom.resetDefaultsBtn.addEventListener('click', () => {
+    resetToDefaults();
   });
 }
 
