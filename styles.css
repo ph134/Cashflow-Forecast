@@ -528,6 +528,7 @@ h1 {
   min-width: 210px;
   width: 210px;
   font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .progress-grid .progress-table td:first-child .inline-note {
@@ -543,6 +544,27 @@ h1 {
 .progress-grid .progress-table th:not(:first-child) .inline-note {
   display: block;
   text-align: center;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  line-height: 1.1;
+}
+
+.forecast-table th:nth-child(n + 3) {
+  font-size: 0.74rem;
+}
+
+.forecast-table th:nth-child(n + 3) .inline-note {
+  display: block;
+  text-align: center;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  line-height: 1.1;
 }
 
 .progress-grid .progress-table td:not(:first-child) {

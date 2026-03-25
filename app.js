@@ -1,35 +1,44 @@
 const STORAGE_KEY = 'cashflow-web-app:state:v1';
 
 function createDefaultState() {
+  const engineerId = crypto.randomUUID();
+  const materialId = crypto.randomUUID();
+  const pmId = crypto.randomUUID();
+  const testId = crypto.randomUUID();
+
   return {
     project: {
-      salesforceOpportunity: '',
-      revision: '',
-      opportunityName: '',
-      manualMargin: '0%',
-      contractValue: 300400,
-      contractCurrency: 'USD',
-      convertToCurrency: 'USD',
+      salesforceOpportunity: '1023455',
+      revision: '1',
+      opportunityName: 'Test - CashBonus',
+      manualMargin: '50%',
+      contractValue: 325000,
+      contractCurrency: 'NOK',
+      convertToCurrency: 'NOK',
       contractFxRate: 1,
       contractRateIsManual: false,
-      projectStartMonth: '2026-04',
-      quotedLeadTimeMonths: 12,
-      netDays: 30,
+      projectStartMonth: '2026-06',
+      quotedLeadTimeMonths: 6,
+      netDays: 0,
     },
     milestones: [
-      { id: crypto.randomUUID(), code: 'MS01', label: 'Upon PO Received', percent: 30, invoiceMonth: '2026-03' },
-      { id: crypto.randomUUID(), code: 'MS02', label: 'Upon start of production', percent: 30, invoiceMonth: '2026-05' },
-      { id: crypto.randomUUID(), code: 'MS03', label: 'Upon delivery of equipment', percent: 30, invoiceMonth: '2026-12' },
-      { id: crypto.randomUUID(), code: 'MS04', label: 'Delivery of documentation', percent: 10, invoiceMonth: '2027-01' },
+      { id: crypto.randomUUID(), code: 'MS01', label: 'Upon PO Received', percent: 30, invoiceMonth: '2026-06' },
+      { id: crypto.randomUUID(), code: 'MS02', label: 'Upon start of production', percent: 30, invoiceMonth: '2026-08' },
+      { id: crypto.randomUUID(), code: 'MS03', label: 'Upon delivery of equipment', percent: 30, invoiceMonth: '2026-10' },
+      { id: crypto.randomUUID(), code: 'MS04', label: 'Delivery of documentation', percent: 10, invoiceMonth: '2026-12' },
     ],
     costs: [
-      { id: crypto.randomUUID(), label: 'Engineer', totalCost: 784, currency: 'USD', convertToCurrency: 'USD', conversionRate: 1, rateIsManual: false },
-      { id: crypto.randomUUID(), label: 'Material', totalCost: 131759.86, currency: 'USD', convertToCurrency: 'USD', conversionRate: 1, rateIsManual: false },
-      { id: crypto.randomUUID(), label: 'Mfg labor', totalCost: 0, currency: 'USD', convertToCurrency: 'USD', conversionRate: 1, rateIsManual: false },
-      { id: crypto.randomUUID(), label: 'FAT', totalCost: 0, currency: 'USD', convertToCurrency: 'USD', conversionRate: 1, rateIsManual: false },
-      { id: crypto.randomUUID(), label: '3rd Party Certification', totalCost: 0, currency: 'USD', convertToCurrency: 'USD', conversionRate: 1, rateIsManual: false },
+      { id: engineerId, label: 'Engineer', totalCost: 17308.56, currency: 'NOK', convertToCurrency: 'NOK', conversionRate: 1, rateIsManual: false },
+      { id: materialId, label: 'Material', totalCost: 131759.86, currency: 'NOK', convertToCurrency: 'NOK', conversionRate: 1, rateIsManual: false },
+      { id: pmId, label: 'PM', totalCost: 10000, currency: 'NOK', convertToCurrency: 'NOK', conversionRate: 1, rateIsManual: false },
+      { id: testId, label: 'Test', totalCost: 18.48, currency: 'NOK', convertToCurrency: 'NOK', conversionRate: 1, rateIsManual: false },
     ],
-    progress: {},
+    progress: {
+      [engineerId]: [0, 60, 100, 100, 100, 100, 100],
+      [materialId]: [0, 30, 40, 60, 80, 80, 90],
+      [pmId]: [10, 30, 40, 59, 65, 80, 100],
+      [testId]: [0, 0, 0, 0, 0, 0, 100],
+    },
   };
 }
 
