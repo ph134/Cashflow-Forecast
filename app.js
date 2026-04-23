@@ -1001,7 +1001,7 @@ function renderChart(model) {
   const lineDots = model.cumulativeNet.map((value, index) => {
     const x = padding.left + index * stepX + stepX / 2;
     const y = yForValue(value);
-    return `<circle cx="${x}" cy="${y}" r="4.5" fill="#0f7b78"></circle>`;
+    return `<circle cx="${x}" cy="${y}" r="4.5" fill="#1F8AB8"></circle>`;
   }).join('');
 
   const xLabels = model.months.map((month, index) => {
@@ -1013,7 +1013,7 @@ function renderChart(model) {
     <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
     ${gridLines}
     <line x1="${padding.left}" y1="${zeroY}" x2="${width - padding.right}" y2="${zeroY}" stroke="rgba(23,33,43,0.24)" />
-    <path d="${cumulativePath}" fill="none" stroke="#0f7b78" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="${cumulativePath}" fill="none" stroke="#1F8AB8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
     ${lineDots}
     ${xLabels}
     <text x="${axisLabelX}" y="${height - 14}" text-anchor="start" fill="#314f63" font-size="13" font-weight="600">Currency (${state.project.convertToCurrency || 'USD'})</text>
@@ -1052,7 +1052,7 @@ function svgElementToPngDataUrl(svgElement) {
         return;
       }
 
-      context.fillStyle = '#fffaf3';
+      context.fillStyle = '#eaf6ff';
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(blobUrl);
@@ -1354,7 +1354,26 @@ async function exportToPowerPoint() {
     pptx.title = 'Cashflow Forecast';
 
     const slide = pptx.addSlide();
-    slide.background = { color: 'F7F1E8' };
+    slide.background = { color: 'F0F5F7' };
+
+    // Convert HMH logo to base64 for PPT
+    const logoDataUrl = await new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          resolve(c.toDataURL('image/png'));
+        } catch (_e) {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = 'hmh-logo.jpg';
+    });
 
     // Shared top header band for chart + summary panels
     slide.addShape('roundRect', {
@@ -1378,19 +1397,8 @@ async function exportToPowerPoint() {
       color: '118CBE',
     });
 
-    slide.addText('HMH', {
-      x: 7.95,
-      y: 0.56,
-      w: 0.9,
-      h: 0.2,
-      fontFace: 'Arial',
-      fontSize: 13,
-      bold: true,
-      color: '1F8AB8',
-    });
-
     slide.addText('Forecast Summary', {
-      x: 8.85,
+      x: 8.58,
       y: 0.55,
       w: 3.2,
       h: 0.24,
@@ -1399,6 +1407,17 @@ async function exportToPowerPoint() {
       bold: true,
       color: '118CBE',
     });
+
+    // HMH logo in upper right of header band
+    if (logoDataUrl) {
+      slide.addImage({
+        data: logoDataUrl,
+        x: 11.95,
+        y: 0.42,
+        h: 0.55,
+        w: 0.88,
+      });
+    }
 
     // Shared body background (single-slide look)
     slide.addShape('rect', {
@@ -1507,7 +1526,7 @@ async function exportToPowerPoint() {
         h: 0.24,
         fontFace: 'Arial',
         fontSize: 11,
-        color: isNegative ? 'D75A2D' : '0F7B78',
+        color: isNegative ? 'E4002B' : '166a94',
         bold: true,
       });
       if (item.note) {
