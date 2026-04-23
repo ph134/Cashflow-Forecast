@@ -1396,10 +1396,10 @@ async function exportToPowerPoint() {
     if (logoDataUrl) {
       slide.addImage({
         data: logoDataUrl,
-        x: 7.3,
-        y: 0.47,
-        h: 0.42,
-        w: 1.1,
+        x: 7.45,
+        y: 0.52,
+        h: 0.3,
+        w: 0.78,
       });
     }
 
