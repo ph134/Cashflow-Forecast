@@ -1392,14 +1392,14 @@ async function exportToPowerPoint() {
       color: '118CBE',
     });
 
-    // HMH logo between titles in header band
+    // HMH logo after Forecast Summary in header band
     if (logoDataUrl) {
       slide.addImage({
         data: logoDataUrl,
-        x: 7.45,
-        y: 0.52,
-        h: 0.3,
-        w: 0.78,
+        x: 11.85,
+        y: 0.56,
+        h: 0.22,
+        w: 0.57,
       });
     }
 
