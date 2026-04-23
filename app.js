@@ -1356,24 +1356,18 @@ async function exportToPowerPoint() {
     const slide = pptx.addSlide();
     slide.background = { color: 'F0F5F7' };
 
-    // Convert HMH logo to base64 for PPT
-    const logoDataUrl = await new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        try {
-          const c = document.createElement('canvas');
-          c.width = img.naturalWidth;
-          c.height = img.naturalHeight;
-          c.getContext('2d').drawImage(img, 0, 0);
-          resolve(c.toDataURL('image/png'));
-        } catch (_e) {
-          resolve(null);
-        }
-      };
-      img.onerror = () => resolve(null);
-      img.src = 'hmh-logo.jpg';
-    });
+    // Get HMH logo from the already-loaded img on the page
+    let logoDataUrl = null;
+    try {
+      const logoImg = document.querySelector('.hmh-logo img') || document.querySelector('.hero-logo img');
+      if (logoImg && logoImg.naturalWidth) {
+        const c = document.createElement('canvas');
+        c.width = logoImg.naturalWidth;
+        c.height = logoImg.naturalHeight;
+        c.getContext('2d').drawImage(logoImg, 0, 0);
+        logoDataUrl = c.toDataURL('image/png');
+      }
+    } catch (_e) { /* logo unavailable, skip */ }
 
     // Shared top header band for chart + summary panels
     slide.addShape('roundRect', {
