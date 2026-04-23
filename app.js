@@ -1,7 +1,7 @@
 ﻿const STORAGE_KEY = 'cashflow-web-app:state:v3';
 const DEFAULT_STATE_KEY = 'cashflow-web-app:default-state:v1';
 const DEFAULTS_VERSION_KEY = 'cashflow-web-app:defaults-version';
-const DEFAULTS_VERSION = '20260324-v4';
+const DEFAULTS_VERSION = '20260423-v5';
 const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
@@ -26,6 +26,27 @@ function createDefaultState() {
       {
         id: crypto.randomUUID(),
         code: 'MS01',
+        label: '',
+        percent: 0,
+        invoiceMonth: starterMonth,
+      },
+      {
+        id: crypto.randomUUID(),
+        code: 'MS02',
+        label: '',
+        percent: 0,
+        invoiceMonth: starterMonth,
+      },
+      {
+        id: crypto.randomUUID(),
+        code: 'MS03',
+        label: '',
+        percent: 0,
+        invoiceMonth: starterMonth,
+      },
+      {
+        id: crypto.randomUUID(),
+        code: 'MS04',
         label: '',
         percent: 0,
         invoiceMonth: starterMonth,
@@ -554,12 +575,12 @@ function renderProjectForm(model) {
       <label class="inline-note" style="display:block;margin-bottom:6px;">Quoted lead time (months)</label>
       <input class="cell-input" type="text" data-kind="project" data-field="quotedLeadTimeMonths" value="${state.project.quotedLeadTimeMonths}">
     </div>
-    <div></div>
     <div class="timeline-field">
       <label class="inline-note" style="display:block;margin-bottom:6px;">Opportunity Name</label>
       <input class="cell-input" type="text" data-kind="project" data-field="opportunityName" value="${state.project.opportunityName || ''}" placeholder="Opportunity Name">
     </div>
-    <div></div>
+    <div class="timeline-field" style="grid-column: 2;">
+    </div>
     <div class="timeline-field">
       <label class="inline-note" style="display:block;margin-bottom:6px;">Project start month</label>
       <input class="cell-input" type="month" data-kind="project" data-field="projectStartMonth" value="${state.project.projectStartMonth}">
