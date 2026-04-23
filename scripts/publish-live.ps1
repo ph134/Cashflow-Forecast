@@ -1,7 +1,9 @@
 param(
   [string]$FromBranch = "main",
   [string]$LiveBranch = "live-share",
-  [string]$Remote = "origin"
+  [string]$Remote = "origin",
+  [ValidateSet("major","minor","patch")]
+  [string]$Bump = "patch"
 )
 
 Set-StrictMode -Version Latest
@@ -20,6 +22,29 @@ if ($insideRepo -ne "true") {
 $dirty = git status --porcelain
 if ($dirty) {
   throw "Working tree has uncommitted changes. Commit or stash them first."
+}
+
+# --- Auto-increment version in index.html ---
+$indexFile = Join-Path (git rev-parse --show-toplevel) "index.html"
+$content = Get-Content $indexFile -Raw
+if ($content -match 'class="version-tag">v(\d+)\.(\d+)\.(\d+)<') {
+  [int]$major = $Matches[1]
+  [int]$minor = $Matches[2]
+  [int]$patch = $Matches[3]
+  $old = "v$major.$minor.$patch"
+  switch ($Bump) {
+    "major" { $major++; $minor = 0; $patch = 0 }
+    "minor" { $minor++; $patch = 0 }
+    "patch" { $patch++ }
+  }
+  $new = "v$major.$minor.$patch"
+  $content = $content -replace [regex]::Escape("version-tag"">$old<"), "version-tag"">$new<"
+  Set-Content $indexFile $content -NoNewline
+  Write-Host "Version bumped: $old -> $new" -ForegroundColor Yellow
+  git add $indexFile
+  git commit -m "$new"
+} else {
+  Write-Host "No version tag found in index.html, skipping bump." -ForegroundColor DarkYellow
 }
 
 Write-Host "Fetching latest from $Remote..." -ForegroundColor Cyan
