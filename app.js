@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'cashflow-web-app:state:v3';
+﻿const STORAGE_KEY = 'cashflow-web-app:state:v3';
 const DEFAULT_STATE_KEY = 'cashflow-web-app:default-state:v1';
 const DEFAULTS_VERSION_KEY = 'cashflow-web-app:defaults-version';
 const DEFAULTS_VERSION = '20260324-v4';
@@ -13,7 +13,6 @@ function createDefaultState() {
       salesforceOpportunity: '',
       revision: '',
       opportunityName: '',
-      manualMargin: '0%',
       contractValue: 0,
       contractCurrency: 'USD',
       convertToCurrency: 'USD',
@@ -137,6 +136,7 @@ const dom = {
   saveSnapshotBtn: document.querySelector('#saveSnapshotBtn'),
   loadSnapshotBtn: document.querySelector('#loadSnapshotBtn'),
   resetDefaultsBtn: document.querySelector('#resetDefaultsBtn'),
+  resetDefaultsTopBtn: document.querySelector('#resetDefaultsTopBtn'),
   cashflowEstimate: document.querySelector('#cashflowEstimate'),
   userGuideBtn: document.querySelector('#userGuideBtn'),
   userGuideModal: document.querySelector('#userGuideModal'),
@@ -249,19 +249,18 @@ function loadSnapshotFromFile(file) {
 }
 
 function resetToDefaults() {
-  if (!window.confirm('Reset all data to current default values? This cannot be undone.')) {
+  if (!window.confirm('Reset all data to default values? This cannot be undone.')) {
     return;
   }
   try {
     localStorage.removeItem('cashflow-web-app:state:v1');
     localStorage.removeItem('cashflow-web-app:state:v2');
     localStorage.removeItem('cashflow-web-app:state:v3');
-    localStorage.removeItem(DEFAULT_STATE_KEY);
     localStorage.setItem(DEFAULTS_VERSION_KEY, DEFAULTS_VERSION);
   } catch {
     // Ignore storage errors
   }
-  const defaults = createDefaultState();
+  const defaults = getEffectiveDefaultState();
   applyState(defaults);
 }
 
@@ -534,7 +533,6 @@ function renderProjectForm(model) {
   const contractFxRate = state.project.contractFxRate ?? 1;
   const contractRateIsManual = state.project.contractRateIsManual;
   const sameCurrency = (state.project.contractCurrency || '').toUpperCase() === (state.project.convertToCurrency || '').toUpperCase();
-  const marginValue = String(state.project.manualMargin ?? '0%');
   const fxBadge = `<span class="rate-badge auto" title="Live rate from open.er-api.com">auto avg: ${Number(contractFxRate).toFixed(6).replace(/\.?0+$/, '')}</span>`;
   const currencySelect = (fieldName, selected) => {
     const options = CURRENCY_OPTIONS.map((curr) => `<option value="${curr}" ${curr === selected ? 'selected' : ''}>${curr}</option>`).join('');
@@ -553,13 +551,15 @@ function renderProjectForm(model) {
       <input class="cell-input" type="text" data-kind="project" data-field="revision" value="${state.project.revision || ''}" placeholder="e.g. Rev A">
     </div>
     <div class="timeline-field">
-      <label class="inline-note" style="display:block;margin-bottom:6px;">Opportunity Name</label>
-      <input class="cell-input" type="text" data-kind="project" data-field="opportunityName" value="${state.project.opportunityName || ''}" placeholder="Opportunity Name">
-    </div>
-    <div class="timeline-field">
       <label class="inline-note" style="display:block;margin-bottom:6px;">Quoted lead time (months)</label>
       <input class="cell-input" type="text" data-kind="project" data-field="quotedLeadTimeMonths" value="${state.project.quotedLeadTimeMonths}">
     </div>
+    <div></div>
+    <div class="timeline-field">
+      <label class="inline-note" style="display:block;margin-bottom:6px;">Opportunity Name</label>
+      <input class="cell-input" type="text" data-kind="project" data-field="opportunityName" value="${state.project.opportunityName || ''}" placeholder="Opportunity Name">
+    </div>
+    <div></div>
     <div class="timeline-field">
       <label class="inline-note" style="display:block;margin-bottom:6px;">Project start month</label>
       <input class="cell-input" type="month" data-kind="project" data-field="projectStartMonth" value="${state.project.projectStartMonth}">
@@ -588,10 +588,10 @@ function renderProjectForm(model) {
           <td style="white-space:nowrap;">
             <input class="cell-input" type="text" data-kind="project" data-field="contractFxRate" value="${contractFxRate}" style="max-width:120px;">
             ${fxBadge}
-            <button class="ghost-button" style="padding:4px 8px;font-size:0.78rem;" type="button" data-kind="reset-contract-fx-rate" title="Reset to 3-month average">Ã¢â€ Âº</button>
+            <button class="ghost-button" style="padding:4px 8px;font-size:0.78rem;" type="button" data-kind="reset-contract-fx-rate" title="Reset to 3-month average">&#x21ba;</button>
           </td>
           <td class="currency-cell ${sameCurrency ? 'muted-cell' : 'converted-value'}">${formatCurrency(clampNumber(state.project.contractValue) * clampNumber(contractFxRate, 1), state.project.convertToCurrency)}</td>
-          <td class="number-cell"><input class="cell-input" type="text" data-kind="project" data-field="manualMargin" value="${marginValue}" placeholder="e.g. 28%"></td>
+          <td class="number-cell" id="calculatedMarginCell" style="font-weight:600;">—</td>
         </tr>
       </tbody>
     </table>
@@ -828,7 +828,7 @@ function renderCosts() {
       <td style="white-space:nowrap;">
         <input class="cell-input" type="text" data-kind="cost" data-id="${cost.id}" data-field="conversionRate" value="${conversionRate}" style="max-width:120px;">
         ${rateLabel}
-        <button class="ghost-button" style="padding:4px 8px;font-size:0.78rem;" type="button" data-kind="reset-fx-rate" data-id="${cost.id}" title="Reset to 3-month average">Ã¢â€ Âº</button>
+        <button class="ghost-button" style="padding:4px 8px;font-size:0.78rem;" type="button" data-kind="reset-fx-rate" data-id="${cost.id}" title="Reset to 3-month average">&#x21ba;</button>
       </td>
       <td class="currency-cell ${needsConversion ? 'converted-value' : 'muted-cell'}">${formatCurrency(convertedTotal, convertToCurrency)}</td>
       <td><button class="remove-button" type="button" data-kind="remove-cost" data-id="${cost.id}">Remove</button></td>
@@ -878,14 +878,22 @@ function renderProgressGrid(model) {
   `;
 }
 
+function getCalculatedMargin(model) {
+  const contractValueConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
+  const totalCost = model.totals.totalCost;
+  if (contractValueConverted === 0) return { pct: 0, text: '0.0%' };
+  const pct = ((contractValueConverted - totalCost) / contractValueConverted) * 100;
+  return { pct, text: `${pct.toFixed(1)}%` };
+}
+
 function getSummaryItems(model) {
   const contractValueConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
-  const marginText = String(state.project.manualMargin || '').trim() || '0%';
+  const margin = getCalculatedMargin(model);
   const horizon = getHorizonMonths();
 
   return [
     { label: 'Contract Value', value: formatCurrency(contractValueConverted), note: '' },
-    { label: 'Margin', value: marginText, note: '' },
+    { label: 'Margin', value: margin.text, note: '' },
     { label: 'Cost Total', value: formatCurrency(model.totals.totalCost), note: 'All cost elements' },
     { label: 'Timeline', value: `${horizon} months`, note: 'Quoted lead time plus net days' },
     { label: 'Estimate Net Value', value: formatCurrency(model.totals.finalNet), note: 'Total project net position' },
@@ -1609,6 +1617,15 @@ function rerender() {
   renderForecastTable(model);
   renderChartHeader();
   renderChart(model);
+
+  // Update calculated margin in contract table
+  const marginCell = document.getElementById('calculatedMarginCell');
+  if (marginCell) {
+    const margin = getCalculatedMargin(model);
+    marginCell.textContent = margin.text;
+    marginCell.style.color = margin.pct < 0 ? '#E4002B' : '';
+  }
+
   persistState();
 }
 
@@ -1891,6 +1908,52 @@ document.addEventListener('keydown', (event) => {
 // Flag to prevent change event from double-rerending when Enter navigates progress cells
 let progressEnterNavigating = false;
 
+// General Enter-to-next-field navigation for all inputs
+document.addEventListener('keydown', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLSelectElement)) return;
+  if (event.key !== 'Enter') return;
+
+  // Progress inputs have their own specialized handler below
+  if (target.dataset.kind === 'progress') return;
+
+  event.preventDefault();
+
+  // Gather all visible, enabled inputs/selects in the page in DOM order
+  const fieldSelector = 'input.cell-input:not([disabled]):not([type="hidden"]), select.cell-input:not([disabled])';
+  const allFields = Array.from(document.querySelectorAll(fieldSelector)).filter(el => el.offsetParent !== null);
+  const currentIndex = allFields.indexOf(target);
+  if (currentIndex === -1) return;
+
+  // Identify the next field by its data attributes before blur/rerender destroys the DOM
+  const nextEl = allFields[currentIndex + 1];
+  let nextSelector = null;
+  if (nextEl) {
+    const kind = nextEl.dataset.kind;
+    const field = nextEl.dataset.field;
+    const id = nextEl.dataset.id;
+    if (kind && field) {
+      nextSelector = id
+        ? `[data-kind="${kind}"][data-field="${field}"][data-id="${id}"]`
+        : `[data-kind="${kind}"][data-field="${field}"]`;
+    }
+  }
+
+  // Trigger blur so that 'change' event fires, state updates, and rerender runs
+  target.blur();
+
+  // After rerender, find the next field in the fresh DOM and focus it
+  if (nextSelector) {
+    requestAnimationFrame(() => {
+      const freshNext = document.querySelector(nextSelector);
+      if (freshNext) {
+        freshNext.focus();
+        if (freshNext instanceof HTMLInputElement) freshNext.select();
+      }
+    });
+  }
+});
+
 // Keyboard navigation: Enter moves to next progress field to the right, then next row
 document.addEventListener('keydown', (event) => {
   const target = event.target;
@@ -2004,6 +2067,12 @@ if (dom.loadSnapshotBtn) {
 
 if (dom.resetDefaultsBtn) {
   dom.resetDefaultsBtn.addEventListener('click', () => {
+    resetToDefaults();
+  });
+}
+
+if (dom.resetDefaultsTopBtn) {
+  dom.resetDefaultsTopBtn.addEventListener('click', () => {
     resetToDefaults();
   });
 }
