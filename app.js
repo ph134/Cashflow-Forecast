@@ -1,7 +1,7 @@
 ﻿const STORAGE_KEY = 'cashflow-web-app:state:v3';
 const DEFAULT_STATE_KEY = 'cashflow-web-app:default-state:v1';
 const DEFAULTS_VERSION_KEY = 'cashflow-web-app:defaults-version';
-const DEFAULTS_VERSION = '20260423-v6';
+const DEFAULTS_VERSION = '20260423-v7';
 const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
@@ -94,6 +94,7 @@ function loadInitialState() {
       localStorage.removeItem('cashflow-web-app:state:v2');
       localStorage.removeItem('cashflow-web-app:state:v3');
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(DEFAULT_STATE_KEY);
       localStorage.setItem(DEFAULTS_VERSION_KEY, DEFAULTS_VERSION);
     }
   } catch {
