@@ -1,7 +1,7 @@
 ﻿const STORAGE_KEY = 'cashflow-web-app:state:v3';
 const DEFAULT_STATE_KEY = 'cashflow-web-app:default-state:v1';
 const DEFAULTS_VERSION_KEY = 'cashflow-web-app:defaults-version';
-const DEFAULTS_VERSION = '20260423-v5';
+const DEFAULTS_VERSION = '20260423-v6';
 const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
@@ -20,36 +20,36 @@ function createDefaultState() {
       contractRateIsManual: false,
       projectStartMonth: starterMonth,
       quotedLeadTimeMonths: 0,
-      netDays: 0,
+      netDays: 30,
     },
     milestones: [
       {
         id: crypto.randomUUID(),
         code: 'MS01',
-        label: '',
-        percent: 0,
-        invoiceMonth: starterMonth,
+        label: 'Upon Placement of PO',
+        percent: 30,
+        invoiceMonth: '',
       },
       {
         id: crypto.randomUUID(),
         code: 'MS02',
-        label: '',
-        percent: 0,
-        invoiceMonth: starterMonth,
+        label: 'Raw Material Receipt',
+        percent: 30,
+        invoiceMonth: '',
       },
       {
         id: crypto.randomUUID(),
         code: 'MS03',
-        label: '',
-        percent: 0,
-        invoiceMonth: starterMonth,
+        label: 'Delivery',
+        percent: 30,
+        invoiceMonth: '',
       },
       {
         id: crypto.randomUUID(),
         code: 'MS04',
-        label: '',
-        percent: 0,
-        invoiceMonth: starterMonth,
+        label: 'Documentation',
+        percent: 10,
+        invoiceMonth: '',
       },
     ],
     costs: [
