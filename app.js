@@ -241,11 +241,10 @@ function getExportBaseName() {
   const rev = String(state.project.revision || '').trim();
   if (!opp) return 'cashflow-forecast';
   const parts = [opp];
-  if (rev) parts.push(rev);
-  return parts.join('_')
+  if (rev) parts.push('Rev ' + rev);
+  return parts.join(' ')
     .replace(/[^a-z0-9\-_ ]/gi, '')
-    .trim()
-    .replace(/\s+/g, '-') || 'cashflow-forecast';
+    .trim() || 'cashflow-forecast';
 }
 
 function saveSnapshot() {
