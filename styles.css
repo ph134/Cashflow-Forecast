@@ -983,7 +983,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(2, minmax(200px, 1fr));
   gap: 16px;
-  font-size: 0.95rem;
+  font-size: 0.74rem;
 }
 
 .estimate-table {
@@ -997,12 +997,16 @@ h1 {
   padding: 8px 6px;
   border-bottom: 1px solid var(--line);
   text-align: center;
-  font-size: 0.86rem;
+  font-size: 0.74rem;
 }
 
 .forecast-table th,
 .forecast-table td {
-  font-size: 0.86rem;
+  font-size: 0.74rem;
+}
+
+.forecast-table .inline-note {
+  font-size: 0.74rem;
 }
 
 .estimate-table th {
@@ -1013,6 +1017,10 @@ h1 {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.estimate-table .inline-note {
+  font-size: 0.74rem;
 }
 
 .estimate-table th:first-child,
