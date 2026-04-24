@@ -236,12 +236,20 @@ function downloadJsonFile(filename, payload) {
   URL.revokeObjectURL(objectUrl);
 }
 
-function saveSnapshot() {
-  const safeName = String(state.project.opportunityName || state.project.salesforceOpportunity || 'cashflow')
+function getExportBaseName() {
+  const opp = String(state.project.salesforceOpportunity || '').trim();
+  const rev = String(state.project.revision || '').trim();
+  if (!opp) return 'cashflow-forecast';
+  const parts = [opp];
+  if (rev) parts.push(rev);
+  return parts.join('_')
     .replace(/[^a-z0-9\-_ ]/gi, '')
     .trim()
-    .replace(/\s+/g, '-')
-    .toLowerCase() || 'cashflow';
+    .replace(/\s+/g, '-') || 'cashflow-forecast';
+}
+
+function saveSnapshot() {
+  const safeName = getExportBaseName();
 
   const payload = {
     schemaVersion: SNAPSHOT_SCHEMA_VERSION,
@@ -1221,8 +1229,7 @@ function exportToExcel() {
 
   XLSX.utils.book_append_sheet(wb, wsForecast, 'Cashflow Forecast');
 
-  const safeName = (state.project.opportunityName || 'cashflow-forecast')
-    .replace(/[^a-z0-9\-_ ]/gi, '').trim() || 'cashflow-forecast';
+  const safeName = getExportBaseName();
   XLSX.writeFile(wb, `${safeName}.xlsx`);
 }
 
@@ -1556,7 +1563,7 @@ async function exportToPowerPoint() {
       }
     });
 
-    await pptx.writeFile({ fileName: 'cashflow-forecast.pptx' });
+    await pptx.writeFile({ fileName: `${getExportBaseName()}.pptx` });
   } catch (error) {
     window.alert(error instanceof Error ? error.message : 'PowerPoint export failed.');
   } finally {
