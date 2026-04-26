@@ -132,6 +132,10 @@ h1 {
   color: #ffffff;
 }
 
+.hero-panel .hero-label {
+  color: #ffffff;
+}
+
 .hero-panel ul {
   padding-left: 16px;
   margin: 4px 0 0;
@@ -895,10 +899,11 @@ h1 {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 20px;
-  border: 1px solid rgba(23, 33, 43, 0.2);
-  background: linear-gradient(180deg, rgba(248, 252, 253, 0.98), rgba(232, 243, 246, 0.98));
-  box-shadow: 0 24px 60px rgba(14, 22, 32, 0.28);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: #ffffff;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
 }
 
 .guide-modal-head {
@@ -908,12 +913,13 @@ h1 {
   gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.68);
+  background: #ffffff;
 }
 
 .guide-modal-head h3 {
   font-size: 1.08rem;
   line-height: 1.2;
+  color: var(--ink);
 }
 
 .guide-modal-body {
@@ -925,13 +931,14 @@ h1 {
   margin-top: 14px;
   margin-bottom: 8px;
   font-size: 0.95rem;
+  color: var(--teal);
 }
 
 .guide-modal-body p,
 .guide-modal-body li {
   font-size: 0.88rem;
   line-height: 1.45;
-  color: #33404c;
+  color: var(--muted);
 }
 
 .guide-modal-body ul {
