@@ -1680,7 +1680,7 @@ function openUserGuideInNewTab() {
         body {
           margin: 0;
           font-family: "Space Grotesk", sans-serif;
-          background: #f7f1e8;
+          background: #ffffff;
           color: #17212b;
         }
         .guide-wrap {
@@ -1689,7 +1689,7 @@ function openUserGuideInNewTab() {
           padding: 0 20px;
         }
         .guide-card {
-          background: #fffdf9;
+          background: #ffffff;
           border: 1px solid rgba(23, 33, 43, 0.14);
           border-radius: 16px;
           padding: 24px;
