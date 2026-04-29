@@ -20,6 +20,7 @@ function createDefaultState() {
       contractRateIsManual: false,
       projectStartMonth: starterMonth,
       quotedLeadTimeMonths: 0,
+      leadTimeUnit: 'months',
       netDays: 30,
     },
     milestones: [
@@ -312,6 +313,40 @@ function getLeadTimeMonths() {
   return Math.max(1, Number(state.project.quotedLeadTimeMonths || 0));
 }
 
+function isYearsMode() {
+  return state.project.leadTimeUnit === 'years';
+}
+
+function aggregateByYear(monthlyValues) {
+  const years = [];
+  for (let i = 0; i < monthlyValues.length; i += 12) {
+    const chunk = monthlyValues.slice(i, i + 12);
+    years.push(chunk.reduce((s, v) => s + v, 0));
+  }
+  return years;
+}
+
+function cumulativeByYear(monthlyValues) {
+  const years = [];
+  let running = 0;
+  for (let i = 0; i < monthlyValues.length; i += 12) {
+    const chunk = monthlyValues.slice(i, i + 12);
+    for (const v of chunk) running += v;
+    years.push(running);
+  }
+  return years;
+}
+
+function getYearHeaders(months) {
+  const years = [];
+  for (let i = 0; i < months.length; i += 12) {
+    const startMonth = months[i];
+    const label = formatMonthLabel(startMonth);
+    years.push(`<th><div>Y${years.length + 1}</div><div class="inline-note">${label}</div></th>`);
+  }
+  return years.join('');
+}
+
 function getHorizonMonths() {
   const roundedNet = Math.round(Number(state.project.netDays || 0) / 30);
   const baseHorizon = Math.max(1, Number(state.project.quotedLeadTimeMonths || 0) + roundedNet);
@@ -584,8 +619,14 @@ function renderProjectForm(model) {
       <input class="cell-input" type="text" data-kind="project" data-field="revision" value="${state.project.revision || ''}" placeholder="e.g. Rev A">
     </div>
     <div class="timeline-field">
-      <label class="inline-note" style="display:block;margin-bottom:6px;">Quoted lead time (months)</label>
-      <input class="cell-input" type="text" data-kind="project" data-field="quotedLeadTimeMonths" value="${state.project.quotedLeadTimeMonths}">
+      <label class="inline-note" style="display:block;margin-bottom:6px;">Quoted lead time</label>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <input class="cell-input" type="text" data-kind="project" data-field="quotedLeadTimeMonths" value="${state.project.leadTimeUnit === 'years' ? (clampNumber(state.project.quotedLeadTimeMonths) / 12) || '' : state.project.quotedLeadTimeMonths}" style="flex:1;">
+        <select class="cell-input" data-kind="project" data-field="leadTimeUnit" style="width:auto;min-width:70px;">
+          <option value="months"${state.project.leadTimeUnit !== 'years' ? ' selected' : ''}>Months</option>
+          <option value="years"${state.project.leadTimeUnit === 'years' ? ' selected' : ''}>Years</option>
+        </select>
+      </div>
     </div>
     <div class="timeline-field">
       <label class="inline-note" style="display:block;margin-bottom:6px;">Opportunity Name</label>
@@ -766,19 +807,34 @@ function renderCashflowEstimate(model) {
   const contractValueConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
   const currency = state.project.convertToCurrency || 'USD';
   const horizon = model.months.length;
+  const yearly = isYearsMode();
 
-  // Build month headers with numbers and date labels
-  const monthHeaders = model.months.map((month, index) => {
-    const label = formatMonthLabel(month);
-    return `<th><div>M${index + 1}</div><div class="inline-note">${label}</div></th>`;
-  }).join('');
+  // Build headers
+  const periodHeaders = yearly
+    ? getYearHeaders(model.months)
+    : model.months.map((month, index) => {
+        const label = formatMonthLabel(month);
+        return `<th><div>M${index + 1}</div><div class="inline-note">${label}</div></th>`;
+      }).join('');
 
   // Build milestone rows
   const milestoneRows = state.milestones.map((milestone) => {
     const targetIndex = model.milestoneRows.find(mr => mr.id === milestone.id)?.targetIndex ?? -1;
+    const revenue = model.milestoneRows.find(mr => mr.id === milestone.id)?.revenueCostCurrency ?? 0;
+
+    if (yearly) {
+      const numYears = Math.ceil(horizon / 12);
+      const cells = Array.from({ length: numYears }, (_, yi) => {
+        if (targetIndex >= yi * 12 && targetIndex < (yi + 1) * 12) {
+          return `<td class="number-cell">${formatNumberFixed2(revenue)}</td>`;
+        }
+        return `<td></td>`;
+      }).join('');
+      return `<tr><td><strong>${milestone.code}</strong></td><td>${milestone.label}</td>${cells}</tr>`;
+    }
+
     const cells = Array.from({ length: horizon }, (_, i) => {
       if (i === targetIndex) {
-        const revenue = model.milestoneRows.find(mr => mr.id === milestone.id)?.revenueCostCurrency ?? 0;
         return `<td class="number-cell">${formatNumberFixed2(revenue)}</td>`;
       }
       return `<td></td>`;
@@ -794,12 +850,14 @@ function renderCashflowEstimate(model) {
   }).join('');
 
   // Revenue total row
-  const revenueTotalCells = model.revenueByMonth.map((value) => {
+  const revenueData = yearly ? aggregateByYear(model.revenueByMonth) : model.revenueByMonth;
+  const revenueTotalCells = revenueData.map((value) => {
     return `<td class="number-cell">${formatNumberFixed2(value)}</td>`;
   }).join('');
 
   // Accrued/cumulative row
-  const accruedCells = model.cumulativeRevenue.map((value) => {
+  const accruedData = yearly ? cumulativeByYear(model.revenueByMonth) : model.cumulativeRevenue;
+  const accruedCells = accruedData.map((value) => {
     return `<td class="number-cell">${formatNumberFixed2(value)}</td>`;
   }).join('');
 
@@ -814,7 +872,7 @@ function renderCashflowEstimate(model) {
         <tr>
           <th>Code</th>
           <th>Activity</th>
-          ${monthHeaders}
+          ${periodHeaders}
         </tr>
       </thead>
       <tbody>
@@ -873,21 +931,45 @@ function renderCosts() {
 function renderProgressGrid(model) {
   if (!dom.progressGrid) return;
   const leadTime = getLeadTimeMonths();
+  const isYears = state.project.leadTimeUnit === 'years';
   const progressMonths = model.months.slice(0, leadTime);
-  const headMonths = progressMonths.map((month, index) => `<th>M${index + 1}<div class="inline-note">${formatMonthLabel(month)}</div></th>`).join('');
+  const headMonths = isYears
+    ? Array.from({ length: Math.ceil(leadTime / 12) }, (_, i) => {
+        const startMonth = progressMonths[i * 12];
+        return `<th>Y${i + 1}<div class="inline-note">${startMonth ? formatMonthLabel(startMonth) : ''}</div></th>`;
+      }).join('')
+    : progressMonths.map((month, index) => `<th>M${index + 1}<div class="inline-note">${formatMonthLabel(month)}</div></th>`).join('');
   const rows = model.costRows.map((costRow) => {
-    const cells = costRow.normalizedProgress.slice(0, leadTime).map((value, index) => `
-      <td>
-        <input
-          class="cell-input"
-          type="text"
-          data-kind="progress"
-          data-id="${costRow.id}"
-          data-index="${index}"
-          value="${formatNumber(value)}"
-        >
-      </td>
-    `).join('');
+    const cells = isYears
+      ? Array.from({ length: Math.ceil(leadTime / 12) }, (_, yi) => {
+          const mi = Math.min((yi + 1) * 12 - 1, leadTime - 1);
+          const value = costRow.normalizedProgress[mi] ?? 100;
+          return `
+            <td>
+              <input
+                class="cell-input"
+                type="text"
+                data-kind="progress-year"
+                data-id="${costRow.id}"
+                data-year-index="${yi}"
+                data-lead-time="${leadTime}"
+                value="${formatNumber(value)}"
+              >
+            </td>
+          `;
+        }).join('')
+      : costRow.normalizedProgress.slice(0, leadTime).map((value, index) => `
+          <td>
+            <input
+              class="cell-input"
+              type="text"
+              data-kind="progress"
+              data-id="${costRow.id}"
+              data-index="${index}"
+              value="${formatNumber(value)}"
+            >
+          </td>
+        `).join('');
 
     return `
       <tr>
@@ -951,25 +1033,49 @@ function renderSummary(model) {
 
 function renderForecastTable(model) {
   if (!dom.forecastHead || !dom.forecastBody) return;
-  dom.forecastHead.innerHTML = `
-    <tr>
-      <th>Series</th>
-      ${model.months.map((month) => `<th>${formatMonthLabel(month)}</th>`).join('')}
-    </tr>
-  `;
+  const yearly = isYearsMode();
 
-  const rows = [
-    { label: 'Forecast Revenue', values: model.revenueByMonth },
-    { label: 'Forecast Cost', values: model.monthlyCost },
-    { label: 'Sum Cashflow', values: model.cumulativeNet },
-  ];
+  if (yearly) {
+    const numYears = Math.ceil(model.months.length / 12);
+    const yearHeaders = Array.from({ length: numYears }, (_, i) => {
+      const startMonth = model.months[i * 12];
+      return `<th>Y${i + 1}<div class="inline-note">${startMonth ? formatMonthLabel(startMonth) : ''}</div></th>`;
+    }).join('');
+    dom.forecastHead.innerHTML = `<tr><th>Series</th>${yearHeaders}</tr>`;
 
-  dom.forecastBody.innerHTML = rows.map((row) => `
-    <tr>
-      <td><strong>${row.label}</strong></td>
-      ${row.values.map((value) => `<td class="${value < 0 ? 'negative' : ''}">${formatNumberFixed2(value)}</td>`).join('')}
-    </tr>
-  `).join('');
+    const rows = [
+      { label: 'Forecast Revenue', values: aggregateByYear(model.revenueByMonth) },
+      { label: 'Forecast Cost', values: aggregateByYear(model.monthlyCost) },
+      { label: 'Sum Cashflow', values: cumulativeByYear(model.netCashFlow) },
+    ];
+
+    dom.forecastBody.innerHTML = rows.map((row) => `
+      <tr>
+        <td><strong>${row.label}</strong></td>
+        ${row.values.map((value) => `<td class="${value < 0 ? 'negative' : ''}">${formatNumberFixed2(value)}</td>`).join('')}
+      </tr>
+    `).join('');
+  } else {
+    dom.forecastHead.innerHTML = `
+      <tr>
+        <th>Series</th>
+        ${model.months.map((month) => `<th>${formatMonthLabel(month)}</th>`).join('')}
+      </tr>
+    `;
+
+    const rows = [
+      { label: 'Forecast Revenue', values: model.revenueByMonth },
+      { label: 'Forecast Cost', values: model.monthlyCost },
+      { label: 'Sum Cashflow', values: model.cumulativeNet },
+    ];
+
+    dom.forecastBody.innerHTML = rows.map((row) => `
+      <tr>
+        <td><strong>${row.label}</strong></td>
+        ${row.values.map((value) => `<td class="${value < 0 ? 'negative' : ''}">${formatNumberFixed2(value)}</td>`).join('')}
+      </tr>
+    `).join('');
+  }
 }
 
 function renderChartHeader() {
@@ -1013,11 +1119,17 @@ function renderChart(model) {
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
 
-  const combinedValues = [...model.cumulativeNet, 0];
+  const yearly = isYearsMode();
+  const chartValues = yearly ? cumulativeByYear(model.netCashFlow) : model.cumulativeNet;
+  const chartLabels = yearly
+    ? Array.from({ length: Math.ceil(model.months.length / 12) }, (_, i) => `Y${i + 1}`)
+    : model.months.map((m) => formatMonthLabel(m));
+
+  const combinedValues = [...chartValues, 0];
   const minValue = Math.min(...combinedValues);
   const maxValue = Math.max(...combinedValues);
   const valueRange = maxValue - minValue || 1;
-  const stepX = plotWidth / Math.max(model.months.length, 1);
+  const stepX = plotWidth / Math.max(chartValues.length, 1);
   const zeroY = padding.top + ((maxValue - 0) / valueRange) * plotHeight;
   const axisLabelX = 18;
 
@@ -1035,21 +1147,21 @@ function renderChart(model) {
     `;
   }).join('');
 
-  const cumulativePath = model.cumulativeNet.map((value, index) => {
+  const cumulativePath = chartValues.map((value, index) => {
     const x = padding.left + index * stepX + stepX / 2;
     const y = yForValue(value);
     return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
   }).join(' ');
 
-  const lineDots = model.cumulativeNet.map((value, index) => {
+  const lineDots = chartValues.map((value, index) => {
     const x = padding.left + index * stepX + stepX / 2;
     const y = yForValue(value);
     return `<circle cx="${x}" cy="${y}" r="4.5" fill="#1F8AB8"></circle>`;
   }).join('');
 
-  const xLabels = model.months.map((month, index) => {
+  const xLabels = chartLabels.map((label, index) => {
     const x = padding.left + index * stepX + stepX / 2;
-    return `<text x="${x}" y="${height - 40}" text-anchor="middle" font-size="12" fill="#314f63">${formatMonthLabel(month)}</text>`;
+    return `<text x="${x}" y="${height - 40}" text-anchor="middle" font-size="12" fill="#314f63">${label}</text>`;
   }).join('');
 
   svg.innerHTML = `
@@ -1135,6 +1247,7 @@ function exportToExcel() {
     ['FX Rate',                clampNumber(state.project.contractFxRate, 1)],
     ['Project Start Month',    state.project.projectStartMonth || ''],
     ['Quoted Lead Time (months)', clampNumber(state.project.quotedLeadTimeMonths)],
+    ['Lead Time Unit', state.project.leadTimeUnit || 'months'],
     ['Net Days',               clampNumber(state.project.netDays)],
     [],
     ['MILESTONES'],
@@ -1757,6 +1870,20 @@ function handleFieldUpdate(target, callRerender = true) {
     state.progress[id][index] = clampPercent(target.value);
     if (callRerender) rerender();
   }
+
+  if (kind === 'progress-year' && target.dataset.id) {
+    const yi = Number(target.dataset.yearIndex);
+    const lt = Number(target.dataset.leadTime);
+    const val = clampPercent(target.value);
+    const costId = target.dataset.id;
+    if (!Array.isArray(state.progress[costId])) state.progress[costId] = [];
+    const startIdx = yi * 12;
+    const endIdx = Math.min(startIdx + 12, lt);
+    for (let i = startIdx; i < endIdx; i++) {
+      state.progress[costId][i] = val;
+    }
+    if (callRerender) rerender();
+  }
 }
 
 // Numeric inputs: update state + rerender on every keystroke
@@ -1776,6 +1903,20 @@ document.addEventListener('input', (event) => {
     if (!Array.isArray(state.progress[target.dataset.id])) state.progress[target.dataset.id] = [];
     state.progress[target.dataset.id][index] = clampPercent(target.value);
     persistState(); // Save to localStorage immediately, but don't rerender
+    return;
+  }
+  // Handle yearly progress: apply same value to all months in that year
+  if (kind === 'progress-year' && target.dataset.id) {
+    const yi = Number(target.dataset.yearIndex);
+    const lt = Number(target.dataset.leadTime);
+    const val = clampPercent(target.value);
+    if (!Array.isArray(state.progress[target.dataset.id])) state.progress[target.dataset.id] = [];
+    const startIdx = yi * 12;
+    const endIdx = Math.min(startIdx + 12, lt);
+    for (let i = startIdx; i < endIdx; i++) {
+      state.progress[target.dataset.id][i] = val;
+    }
+    persistState();
     return;
   }
   // Also skip project text fields that go through renderProjectForm
@@ -1809,11 +1950,11 @@ document.addEventListener('change', (event) => {
   const kind = target.dataset.kind;
   const field = target.dataset.field;
 
-  if (!TEXT_FIELDS.has(field) && kind !== 'progress' && !(kind === 'project' && target.type === 'text')) return;
+  if (!TEXT_FIELDS.has(field) && kind !== 'progress' && kind !== 'progress-year' && !(kind === 'project' && (target.type === 'text' || target.tagName === 'SELECT'))) return;
 
   // Progress inputs: rerender when user leaves the field (blur only)
   // Enter key is handled by the keydown handler which does its own rerender+navigate
-  if (kind === 'progress') {
+  if (kind === 'progress' || kind === 'progress-year') {
     if (!progressEnterNavigating) rerender();
     progressEnterNavigating = false;
     return;
@@ -1880,7 +2021,17 @@ document.addEventListener('change', (event) => {
   }
 
   if (kind === 'project' && field) {
-    state.project[field] = NUMERIC_TEXT_FIELDS.has(field) ? clampNumber(target.value, 0) : target.value;
+    if (field === 'leadTimeUnit') {
+      state.project.leadTimeUnit = target.value;
+      rerender();
+      return;
+    }
+    if (field === 'quotedLeadTimeMonths') {
+      const raw = clampNumber(target.value, 0);
+      state.project.quotedLeadTimeMonths = state.project.leadTimeUnit === 'years' ? Math.round(raw * 12) : raw;
+    } else {
+      state.project[field] = NUMERIC_TEXT_FIELDS.has(field) ? clampNumber(target.value, 0) : target.value;
+    }
     if (field === 'contractFxRate') {
       state.project.contractRateIsManual = true;
     }
