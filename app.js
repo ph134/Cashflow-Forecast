@@ -308,6 +308,10 @@ function saveCurrentAsDefault() {
   }
 }
 
+function getLeadTimeMonths() {
+  return Math.max(1, Number(state.project.quotedLeadTimeMonths || 0));
+}
+
 function getHorizonMonths() {
   const roundedNet = Math.round(Number(state.project.netDays || 0) / 30);
   const baseHorizon = Math.max(1, Number(state.project.quotedLeadTimeMonths || 0) + roundedNet);
@@ -868,9 +872,11 @@ function renderCosts() {
 
 function renderProgressGrid(model) {
   if (!dom.progressGrid) return;
-  const headMonths = model.months.map((month, index) => `<th>M${index + 1}<div class="inline-note">${formatMonthLabel(month)}</div></th>`).join('');
+  const leadTime = getLeadTimeMonths();
+  const progressMonths = model.months.slice(0, leadTime);
+  const headMonths = progressMonths.map((month, index) => `<th>M${index + 1}<div class="inline-note">${formatMonthLabel(month)}</div></th>`).join('');
   const rows = model.costRows.map((costRow) => {
-    const cells = costRow.normalizedProgress.map((value, index) => `
+    const cells = costRow.normalizedProgress.slice(0, leadTime).map((value, index) => `
       <td>
         <input
           class="cell-input"
