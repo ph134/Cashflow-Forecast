@@ -21,6 +21,7 @@ function createDefaultState() {
       projectStartMonth: starterMonth,
       quotedLeadTimeMonths: 0,
       leadTimeUnit: 'months',
+      progressInputMode: 'percent',
       netDays: 30,
     },
     milestones: [
@@ -67,6 +68,7 @@ function createDefaultState() {
     progress: {
       [starterCostId]: [0],
     },
+    progressValues: {},
   };
 }
 
@@ -164,6 +166,7 @@ const dom = {
   userGuideBtn: document.querySelector('#userGuideBtn'),
   userGuideModal: document.querySelector('#userGuideModal'),
   closeGuideBtn: document.querySelector('#closeGuideBtn'),
+  progressInputModeSelect: document.querySelector('#progressInputModeSelect'),
 };
 
 function cloneStateForSnapshot(source) {
@@ -172,6 +175,7 @@ function cloneStateForSnapshot(source) {
     milestones: Array.isArray(source?.milestones) ? source.milestones.map((milestone) => ({ ...milestone })) : [],
     costs: Array.isArray(source?.costs) ? source.costs.map((cost) => ({ ...cost })) : [],
     progress: source?.progress && typeof source.progress === 'object' ? JSON.parse(JSON.stringify(source.progress)) : {},
+    progressValues: source?.progressValues && typeof source.progressValues === 'object' ? JSON.parse(JSON.stringify(source.progressValues)) : {},
   };
 }
 
@@ -221,6 +225,7 @@ function applyState(nextState) {
   state.milestones = nextState.milestones.map((milestone) => ({ ...milestone }));
   state.costs = nextState.costs.map((cost) => ({ ...cost }));
   state.progress = JSON.parse(JSON.stringify(nextState.progress || {}));
+  state.progressValues = JSON.parse(JSON.stringify(nextState.progressValues || {}));
   ensureProgressShape();
   rerender();
 }
@@ -402,6 +407,26 @@ function ensureProgressShape() {
       delete state.progress[key];
     }
   }
+
+  // Ensure progressValues shape
+  if (!state.progressValues) state.progressValues = {};
+  for (const cost of state.costs) {
+    if (!Array.isArray(state.progressValues[cost.id])) {
+      state.progressValues[cost.id] = Array.from({ length: horizon }, () => 0);
+    } else {
+      const row = state.progressValues[cost.id];
+      if (row.length < horizon) {
+        while (row.length < horizon) row.push(0);
+      } else if (row.length > horizon) {
+        row.length = horizon;
+      }
+    }
+  }
+  for (const key of Object.keys(state.progressValues)) {
+    if (!liveIds.has(key)) {
+      delete state.progressValues[key];
+    }
+  }
 }
 
 function parseMonth(monthValue) {
@@ -530,6 +555,8 @@ function computeModel() {
     cumulativeRevenue.push(runningRevenue);
   }
 
+  const isValueMode = state.project.progressInputMode === 'value';
+
   const costRows = state.costs.map((cost) => {
     const normalizedProgress = normalizeProgressRow(state.progress[cost.id] || []);
     const rate = clampNumber(cost.conversionRate, 1) || 1;
@@ -537,12 +564,19 @@ function computeModel() {
     const monthlyCost = [];
     let priorCost = 0;
 
-    normalizedProgress.forEach((progressValue) => {
-      const cumulativeCost = convertedTotal * (progressValue / 100);
-      const monthCost = Math.max(0, cumulativeCost - priorCost);
-      monthlyCost.push(monthCost);
-      priorCost = cumulativeCost;
-    });
+    if (isValueMode) {
+      const values = state.progressValues?.[cost.id] || [];
+      for (let i = 0; i < horizon; i++) {
+        monthlyCost.push(clampNumber(values[i], 0));
+      }
+    } else {
+      normalizedProgress.forEach((progressValue) => {
+        const cumulativeCost = convertedTotal * (progressValue / 100);
+        const monthCost = Math.max(0, cumulativeCost - priorCost);
+        monthlyCost.push(monthCost);
+        priorCost = cumulativeCost;
+      });
+    }
 
     return {
       ...cost,
@@ -932,16 +966,65 @@ function renderProgressGrid(model) {
   if (!dom.progressGrid) return;
   const leadTime = getLeadTimeMonths();
   const isYears = state.project.leadTimeUnit === 'years';
+  const isValueMode = state.project.progressInputMode === 'value';
   const progressMonths = model.months.slice(0, leadTime);
+
+  // Sync the select dropdown
+  if (dom.progressInputModeSelect) {
+    dom.progressInputModeSelect.value = state.project.progressInputMode || 'percent';
+  }
+
   const headMonths = isYears
     ? Array.from({ length: Math.ceil(leadTime / 12) }, (_, i) => {
         const startMonth = progressMonths[i * 12];
         return `<th>Y${i + 1}<div class="inline-note">${startMonth ? formatMonthLabel(startMonth) : ''}</div></th>`;
       }).join('')
     : progressMonths.map((month, index) => `<th>M${index + 1}<div class="inline-note">${formatMonthLabel(month)}</div></th>`).join('');
+
   const rows = model.costRows.map((costRow) => {
-    const cells = isYears
-      ? Array.from({ length: Math.ceil(leadTime / 12) }, (_, yi) => {
+    let cells;
+
+    if (isValueMode) {
+      const values = state.progressValues?.[costRow.id] || [];
+      if (isYears) {
+        cells = Array.from({ length: Math.ceil(leadTime / 12) }, (_, yi) => {
+          // Sum values for this year
+          const startIdx = yi * 12;
+          const endIdx = Math.min(startIdx + 12, leadTime);
+          let yearVal = 0;
+          for (let i = startIdx; i < endIdx; i++) yearVal += clampNumber(values[i], 0);
+          return `
+            <td>
+              <input
+                class="cell-input"
+                type="text"
+                data-kind="progress-value-year"
+                data-id="${costRow.id}"
+                data-year-index="${yi}"
+                data-lead-time="${leadTime}"
+                value="${formatNumberFixed2(yearVal)}"
+              >
+            </td>
+          `;
+        }).join('');
+      } else {
+        cells = Array.from({ length: leadTime }, (_, index) => `
+          <td>
+            <input
+              class="cell-input"
+              type="text"
+              data-kind="progress-value"
+              data-id="${costRow.id}"
+              data-index="${index}"
+              value="${formatNumberFixed2(clampNumber(values[index], 0))}"
+            >
+          </td>
+        `).join('');
+      }
+    } else {
+      // Cumulative % mode (original)
+      if (isYears) {
+        cells = Array.from({ length: Math.ceil(leadTime / 12) }, (_, yi) => {
           const mi = Math.min((yi + 1) * 12 - 1, leadTime - 1);
           const value = costRow.normalizedProgress[mi] ?? 100;
           return `
@@ -957,8 +1040,9 @@ function renderProgressGrid(model) {
               >
             </td>
           `;
-        }).join('')
-      : costRow.normalizedProgress.slice(0, leadTime).map((value, index) => `
+        }).join('');
+      } else {
+        cells = costRow.normalizedProgress.slice(0, leadTime).map((value, index) => `
           <td>
             <input
               class="cell-input"
@@ -970,6 +1054,8 @@ function renderProgressGrid(model) {
             >
           </td>
         `).join('');
+      }
+    }
 
     return `
       <tr>
@@ -1884,6 +1970,33 @@ function handleFieldUpdate(target, callRerender = true) {
     }
     if (callRerender) rerender();
   }
+
+  if (kind === 'progress-value' && target.dataset.id) {
+    const index = Number(target.dataset.index);
+    const costId = target.dataset.id;
+    if (!state.progressValues) state.progressValues = {};
+    if (!Array.isArray(state.progressValues[costId])) state.progressValues[costId] = [];
+    state.progressValues[costId][index] = clampNumber(target.value, 0);
+    if (callRerender) rerender();
+  }
+
+  if (kind === 'progress-value-year' && target.dataset.id) {
+    const yi = Number(target.dataset.yearIndex);
+    const lt = Number(target.dataset.leadTime);
+    const val = clampNumber(target.value, 0);
+    const costId = target.dataset.id;
+    if (!state.progressValues) state.progressValues = {};
+    if (!Array.isArray(state.progressValues[costId])) state.progressValues[costId] = [];
+    // Spread value evenly across the year's months
+    const startIdx = yi * 12;
+    const endIdx = Math.min(startIdx + 12, lt);
+    const monthCount = endIdx - startIdx;
+    const perMonth = monthCount > 0 ? val / monthCount : 0;
+    for (let i = startIdx; i < endIdx; i++) {
+      state.progressValues[costId][i] = perMonth;
+    }
+    if (callRerender) rerender();
+  }
 }
 
 // Numeric inputs: update state + rerender on every keystroke
@@ -1919,6 +2032,31 @@ document.addEventListener('input', (event) => {
     persistState();
     return;
   }
+  // Handle value mode progress
+  if (kind === 'progress-value' && target.dataset.id) {
+    const index = Number(target.dataset.index);
+    if (!state.progressValues) state.progressValues = {};
+    if (!Array.isArray(state.progressValues[target.dataset.id])) state.progressValues[target.dataset.id] = [];
+    state.progressValues[target.dataset.id][index] = clampNumber(target.value, 0);
+    persistState();
+    return;
+  }
+  if (kind === 'progress-value-year' && target.dataset.id) {
+    const yi = Number(target.dataset.yearIndex);
+    const lt = Number(target.dataset.leadTime);
+    const val = clampNumber(target.value, 0);
+    if (!state.progressValues) state.progressValues = {};
+    if (!Array.isArray(state.progressValues[target.dataset.id])) state.progressValues[target.dataset.id] = [];
+    const startIdx = yi * 12;
+    const endIdx = Math.min(startIdx + 12, lt);
+    const monthCount = endIdx - startIdx;
+    const perMonth = monthCount > 0 ? val / monthCount : 0;
+    for (let i = startIdx; i < endIdx; i++) {
+      state.progressValues[target.dataset.id][i] = perMonth;
+    }
+    persistState();
+    return;
+  }
   // Also skip project text fields that go through renderProjectForm
   if (kind === 'project' && target.type !== 'number' && target.type !== 'month') return;
 
@@ -1950,11 +2088,13 @@ document.addEventListener('change', (event) => {
   const kind = target.dataset.kind;
   const field = target.dataset.field;
 
-  if (!TEXT_FIELDS.has(field) && kind !== 'progress' && kind !== 'progress-year' && !(kind === 'project' && (target.type === 'text' || target.tagName === 'SELECT'))) return;
+  const progressKinds = new Set(['progress', 'progress-year', 'progress-value', 'progress-value-year']);
+
+  if (!TEXT_FIELDS.has(field) && !progressKinds.has(kind) && !(kind === 'project' && (target.type === 'text' || target.tagName === 'SELECT'))) return;
 
   // Progress inputs: rerender when user leaves the field (blur only)
   // Enter key is handled by the keydown handler which does its own rerender+navigate
-  if (kind === 'progress' || kind === 'progress-year') {
+  if (progressKinds.has(kind)) {
     if (!progressEnterNavigating) rerender();
     progressEnterNavigating = false;
     return;
@@ -2265,6 +2405,13 @@ if (dom.resetDefaultsTopBtn) {
 if (dom.setDefaultsBtn) {
   dom.setDefaultsBtn.addEventListener('click', () => {
     saveCurrentAsDefault();
+  });
+}
+
+if (dom.progressInputModeSelect) {
+  dom.progressInputModeSelect.addEventListener('change', () => {
+    state.project.progressInputMode = dom.progressInputModeSelect.value;
+    rerender();
   });
 }
 
