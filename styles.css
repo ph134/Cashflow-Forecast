@@ -39,24 +39,22 @@ select {
   margin: 8px auto 20px;
 }
 
-.hero {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
+.hero-title-bar {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 6px);
-  background: linear-gradient(135deg, rgba(248, 252, 253, 0.92), rgba(232, 243, 246, 0.84));
+  background: linear-gradient(135deg, rgba(248, 252, 253, 0.98), rgba(232, 243, 246, 0.95));
   box-shadow: var(--shadow);
-  overflow: hidden;
   position: sticky;
   top: 0;
   z-index: 50;
 }
 
-.hero > div:first-child {
-  align-self: center;
+.hero-title-bar > div:first-child {
+  flex: 1;
 }
 
 .hero-logo {
@@ -69,17 +67,6 @@ select {
   width: auto;
   display: block;
   object-fit: contain;
-}
-
-.hero::after {
-  content: "";
-  position: absolute;
-  inset: auto -60px -80px auto;
-  width: 220px;
-  height: 220px;
-  border-radius: 40px;
-  background: linear-gradient(180deg, rgba(31, 138, 184, 0.18), rgba(31, 138, 184, 0));
-  transform: rotate(24deg);
 }
 
 .eyebrow,
@@ -126,8 +113,7 @@ h1 {
 }
 
 .hero-panel {
-  grid-column: 1 / -1;
-  align-self: stretch;
+  margin-top: 8px;
   padding: 10px 14px;
   border-radius: 16px;
   background: linear-gradient(135deg, #1F8AB8, #166a94);
@@ -151,10 +137,10 @@ h1 {
     margin-top: 8px;
   }
 
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 14px;
+  .hero-title-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
   }
 
   h1 {
@@ -441,8 +427,6 @@ h1 {
   padding: 4px 8px;
   font-size: 0.74rem;
   width: fit-content;
-  justify-self: start;
-  align-self: end;
 }
 
 #userGuideBtn:hover {

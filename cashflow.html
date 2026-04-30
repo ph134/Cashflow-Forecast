@@ -11,7 +11,7 @@
 </head>
 <body>
   <div class="page-shell">
-    <header class="hero">
+    <header class="hero-title-bar">
       <div>
         <h1>Opportunity Finance Overview</h1>
         <span class="version-tag">v1.0.0</span>
@@ -19,16 +19,8 @@
       <div class="hero-logo">
         <img src="hmh-logo.jpg" alt="HMH logo">
       </div>
-      <div class="hero-panel">
-        <p class="hero-label">Model notes</p>
-        <ul>
-          <li>Revenue is converted using the exchange rate.</li>
-          <li>Cost schedule uses cumulative completion by month.</li>
-          <li>Timeline length equals quoted lead time plus rounded net days.</li>
-        </ul>
-      </div>
       <button id="userGuideBtn" class="ghost-button small-export-btn" type="button">User Guide</button>
-      <div style="justify-self:end;align-self:end;position:relative;">
+      <div style="justify-self:end;align-self:center;position:relative;">
         <button id="settingsBtn" class="ghost-button small-export-btn" type="button" title="Settings">&#9881;</button>
         <div id="settingsPopover" class="settings-popover" hidden>
           <label for="dateFormatSelect" class="settings-label">Date Format</label>
@@ -41,6 +33,14 @@
         </div>
       </div>
     </header>
+    <div class="hero-panel">
+      <p class="hero-label">Model notes</p>
+      <ul>
+        <li>Revenue is converted using the exchange rate.</li>
+        <li>Cost schedule uses cumulative completion by month.</li>
+        <li>Timeline length equals quoted lead time plus rounded net days.</li>
+      </ul>
+    </div>
 
     <main class="layout-grid">
       <div class="inputs-section-wrapper">
