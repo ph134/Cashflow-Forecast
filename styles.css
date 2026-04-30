@@ -421,6 +421,34 @@ h1 {
   border-color: #166a94 !important;
 }
 
+#settingsBtn {
+  font-size: 1rem;
+  padding: 3px 8px;
+  line-height: 1;
+}
+
+.settings-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 100;
+}
+
+.settings-label {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
 .table-scroll {
   overflow-x: auto;
 }

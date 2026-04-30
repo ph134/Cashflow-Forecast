@@ -24,6 +24,7 @@ function createDefaultState() {
       progressInputMode: 'percent',
       costNetDays: 30,
       netDays: 30,
+      dateFormat: 'MMM YY',
     },
     milestones: [
       {
@@ -167,6 +168,9 @@ const dom = {
   userGuideBtn: document.querySelector('#userGuideBtn'),
   userGuideModal: document.querySelector('#userGuideModal'),
   closeGuideBtn: document.querySelector('#closeGuideBtn'),
+  settingsBtn: document.querySelector('#settingsBtn'),
+  settingsPopover: document.querySelector('#settingsPopover'),
+  dateFormatSelect: document.querySelector('#dateFormatSelect'),
   progressInputModeSelect: null,
 };
 
@@ -453,7 +457,17 @@ function monthKey(date) {
 }
 
 function formatMonthLabel(date) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', year: '2-digit' }).format(date);
+  const fmt = state.project.dateFormat || 'MMM YY';
+  switch (fmt) {
+    case 'MM/YY':
+      return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
+    case 'MMM YYYY':
+      return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
+    case 'MM/YYYY':
+      return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    default: // 'MMM YY'
+      return new Intl.DateTimeFormat('en-US', { month: 'short', year: '2-digit' }).format(date);
+  }
 }
 
 function clampNumber(value, fallback = 0) {
@@ -1385,6 +1399,7 @@ function exportToExcel() {
     ['Lead Time Unit', state.project.leadTimeUnit || 'months'],
     ['Net Days',               clampNumber(state.project.netDays)],
     ['Supplier Net',          clampNumber(state.project.costNetDays)],
+    ['Date Format',            state.project.dateFormat || 'MMM YY'],
     [],
     ['MILESTONES'],
     ['Code', 'Label', 'Percent (%)', 'Invoice Month', `Revenue (${currency})`],
@@ -1524,6 +1539,7 @@ function importFromExcel(file) {
       if (lookup['Quoted Lead Time (months)'] !== undefined) newProject.quotedLeadTimeMonths = Number(lookup['Quoted Lead Time (months)']) || 0;
       if (lookup['Net Days'] !== undefined) newProject.netDays = Number(lookup['Net Days']) || 0;
       if (lookup['Supplier Net'] !== undefined) newProject.costNetDays = Number(lookup['Supplier Net']) || 0;
+      if (lookup['Date Format']) newProject.dateFormat = String(lookup['Date Format']);
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Find section start rows Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       let msHeaderRow = -1, costHeaderRow = -1, plannedHeaderRow = -1;
@@ -2244,6 +2260,16 @@ document.addEventListener('click', (event) => {
     return;
   }
 
+  if (target.id === 'settingsBtn') {
+    if (dom.settingsPopover) {
+      dom.settingsPopover.hidden = !dom.settingsPopover.hidden;
+      if (!dom.settingsPopover.hidden && dom.dateFormatSelect) {
+        dom.dateFormatSelect.value = state.project.dateFormat || 'MMM YY';
+      }
+    }
+    return;
+  }
+
   if (target.id === 'closeGuideBtn' || target.id === 'userGuideModal') {
     if (dom.userGuideModal) {
       dom.userGuideModal.hidden = true;
@@ -2458,6 +2484,23 @@ if (dom.setDefaultsBtn) {
     saveCurrentAsDefault();
   });
 }
+
+if (dom.dateFormatSelect) {
+  dom.dateFormatSelect.addEventListener('change', () => {
+    state.project.dateFormat = dom.dateFormatSelect.value;
+    if (dom.settingsPopover) dom.settingsPopover.hidden = true;
+    rerender();
+  });
+}
+
+// Close settings popover when clicking outside
+document.addEventListener('click', (e) => {
+  if (dom.settingsPopover && !dom.settingsPopover.hidden) {
+    if (!dom.settingsPopover.contains(e.target) && e.target.id !== 'settingsBtn') {
+      dom.settingsPopover.hidden = true;
+    }
+  }
+});
 
 ensureProgressShape();
 rerender();
