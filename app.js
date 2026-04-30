@@ -2260,18 +2260,6 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  // Collapsible section headings
-  const collapseHeading = target.closest('.collapsible-heading');
-  if (collapseHeading) {
-    const targetId = collapseHeading.dataset.collapse;
-    const content = document.getElementById(targetId);
-    if (content) {
-      const isCollapsed = content.classList.toggle('collapsed');
-      collapseHeading.classList.toggle('collapsed', isCollapsed);
-    }
-    return;
-  }
-
   if (target.id === 'settingsBtn') {
     if (dom.settingsPopover) {
       dom.settingsPopover.hidden = !dom.settingsPopover.hidden;
@@ -2514,9 +2502,40 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Collapsible sections: Inputs, Cashflow Estimate, Forecast
+(function setupCollapsible() {
+  // Mark the Inputs wrapper heading
+  const inputsWrapper = document.querySelector('.inputs-section-wrapper');
+  if (inputsWrapper) {
+    const heading = inputsWrapper.querySelector('.section-heading');
+    if (heading) {
+      heading.classList.add('collapsible');
+      heading.addEventListener('click', (e) => {
+        if (e.target.closest('button, input, select, a')) return;
+        heading.classList.toggle('collapsed');
+        inputsWrapper.classList.toggle('section-collapsed');
+      });
+    }
+  }
+
+  // Mark Cashflow Estimate and Forecast section headings
+  const sectionLabels = ['Cashflow Estimate', 'Forecast'];
+  document.querySelectorAll('.section-heading').forEach((heading) => {
+    const h2 = heading.querySelector('h2');
+    if (h2 && sectionLabels.includes(h2.textContent.trim())) {
+      heading.classList.add('collapsible');
+      heading.addEventListener('click', (e) => {
+        if (e.target.closest('button, input, select, a')) return;
+        heading.classList.toggle('collapsed');
+        const panel = heading.closest('.panel');
+        if (panel) panel.classList.toggle('section-collapsed');
+      });
+    }
+  });
+})();
+
 ensureProgressShape();
 rerender();
-// Auto-fetch contract FX rate at startup if currencies differ
 async function autoFetchContractRate() {
   if (state.project.contractRateIsManual) return;
   const from = (state.project.contractCurrency || '').trim().toUpperCase();

@@ -11,7 +11,7 @@
 </head>
 <body>
   <div class="page-shell">
-    <header class="hero-title-bar">
+    <header class="hero">
       <div>
         <h1>Opportunity Finance Overview</h1>
         <span class="version-tag">v1.0.0</span>
@@ -19,8 +19,16 @@
       <div class="hero-logo">
         <img src="hmh-logo.jpg" alt="HMH logo">
       </div>
+      <div class="hero-panel">
+        <p class="hero-label">Model notes</p>
+        <ul>
+          <li>Revenue is converted using the exchange rate.</li>
+          <li>Cost schedule uses cumulative completion by month.</li>
+          <li>Timeline length equals quoted lead time plus rounded net days.</li>
+        </ul>
+      </div>
       <button id="userGuideBtn" class="ghost-button small-export-btn" type="button">User Guide</button>
-      <div style="justify-self:end;align-self:center;position:relative;">
+      <div style="justify-self:end;align-self:end;position:relative;">
         <button id="settingsBtn" class="ghost-button small-export-btn" type="button" title="Settings">&#9881;</button>
         <div id="settingsPopover" class="settings-popover" hidden>
           <label for="dateFormatSelect" class="settings-label">Date Format</label>
@@ -33,26 +41,17 @@
         </div>
       </div>
     </header>
-    <div class="hero-panel">
-      <p class="hero-label">Model notes</p>
-      <ul>
-        <li>Revenue is converted using the exchange rate.</li>
-        <li>Cost schedule uses cumulative completion by month.</li>
-        <li>Timeline length equals quoted lead time plus rounded net days.</li>
-      </ul>
-    </div>
 
     <main class="layout-grid">
       <div class="inputs-section-wrapper">
-        <div class="section-heading collapsible-heading" data-collapse="inputsContent">
-          <div>
-            <p class="section-kicker">Inputs</p>
-            <h2>Opportunity Information</h2>
-          </div>
-          <button id="resetDefaultsTopBtn" class="ghost-button" type="button" style="font-size:0.78rem;padding:4px 10px;">Reset to Default</button>
-        </div>
-        <div id="inputsContent" class="collapsible-content">
         <section class="panel span-12 contract-panel compact-input-panel">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Inputs</p>
+              <h2>Opportunity Information</h2>
+            </div>
+            <button id="resetDefaultsTopBtn" class="ghost-button" type="button" style="font-size:0.78rem;padding:4px 10px;">Reset to Default</button>
+          </div>
           <form id="projectForm" class="project-form"></form>
         </section>
 
@@ -117,27 +116,23 @@
           </div>
           <div id="progressGrid" class="progress-grid table-scroll"></div>
         </section>
-        </div>
       </div>
 
       <section class="panel span-12">
-        <div class="section-heading collapsible-heading" data-collapse="estimateContent">
+        <div class="section-heading">
           <div>
             <h2>Cashflow Estimate</h2>
           </div>
         </div>
-        <div id="estimateContent" class="collapsible-content">
-          <div id="cashflowEstimate" class="table-scroll"></div>
-        </div>
+        <div id="cashflowEstimate" class="table-scroll"></div>
       </section>
 
       <section class="panel span-12">
-        <div class="section-heading collapsible-heading" data-collapse="forecastContent">
+        <div class="section-heading">
           <div>
             <h2>Forecast</h2>
           </div>
         </div>
-        <div id="forecastContent" class="collapsible-content">
         <div class="table-scroll">
           <table class="forecast-table">
             <thead id="forecastHead"></thead>
@@ -155,7 +150,6 @@
           <label id="importXlsLabel" class="ghost-button small-export-btn" style="cursor:pointer;margin-left:6px;">Import Excel
             <input id="importXlsBtn" type="file" accept=".xlsx" style="display:none;">
           </label>
-        </div>
         </div>
       </section>
 
