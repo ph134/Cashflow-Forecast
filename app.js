@@ -22,6 +22,7 @@ function createDefaultState() {
       quotedLeadTimeMonths: 0,
       leadTimeUnit: 'months',
       progressInputMode: 'percent',
+      costNetDays: 30,
       netDays: 30,
     },
     milestones: [
@@ -166,7 +167,7 @@ const dom = {
   userGuideBtn: document.querySelector('#userGuideBtn'),
   userGuideModal: document.querySelector('#userGuideModal'),
   closeGuideBtn: document.querySelector('#closeGuideBtn'),
-  progressInputModeSelect: document.querySelector('#progressInputModeSelect'),
+  progressInputModeSelect: null,
 };
 
 function cloneStateForSnapshot(source) {
@@ -354,7 +355,8 @@ function getYearHeaders(months) {
 
 function getHorizonMonths() {
   const roundedNet = Math.round(Number(state.project.netDays || 0) / 30);
-  const baseHorizon = Math.max(1, Number(state.project.quotedLeadTimeMonths || 0) + roundedNet);
+  const roundedCostNet = Math.round(Number(state.project.costNetDays || 0) / 30);
+  const baseHorizon = Math.max(1, Number(state.project.quotedLeadTimeMonths || 0) + Math.max(roundedNet, roundedCostNet));
   const startMonthValue = state.project.projectStartMonth;
 
   if (!startMonthValue) {
@@ -586,8 +588,12 @@ function computeModel() {
     };
   });
 
+  // Shift costs forward by costNetDays (converted to whole months)
+  const costNetMonths = Math.max(0, Math.round(clampNumber(state.project.costNetDays, 0) / 30));
   const monthlyCost = Array.from({ length: horizon }, (_, index) => {
-    return costRows.reduce((sum, row) => sum + (row.monthlyCost[index] || 0), 0);
+    const sourceIndex = index - costNetMonths;
+    if (sourceIndex < 0) return 0;
+    return costRows.reduce((sum, row) => sum + (row.monthlyCost[sourceIndex] || 0), 0);
   });
 
   const cumulativeCost = [];
@@ -969,9 +975,51 @@ function renderProgressGrid(model) {
   const isValueMode = state.project.progressInputMode === 'value';
   const progressMonths = model.months.slice(0, leadTime);
 
-  // Sync the select dropdown
-  if (dom.progressInputModeSelect) {
+  // Render progress input mode toggle in section heading
+  const section = dom.progressGrid.closest('section');
+  if (section) {
+    const heading = section.querySelector('.section-heading');
+
+    // Progress input mode select
+    if (!dom.progressInputModeSelect) {
+      const sel = document.createElement('select');
+      sel.id = 'progressInputModeSelect';
+      sel.className = 'cell-input';
+      sel.style.cssText = 'width:auto;min-width:120px;font-size:0.74rem;';
+      sel.innerHTML = `
+        <option value="percent">Cumulative %</option>
+        <option value="value">Cost Values</option>
+      `;
+      if (heading) heading.appendChild(sel);
+      sel.addEventListener('change', () => {
+        state.project.progressInputMode = sel.value;
+        rerender();
+      });
+      dom.progressInputModeSelect = sel;
+    }
     dom.progressInputModeSelect.value = state.project.progressInputMode || 'percent';
+
+    // Supplier Net field
+    let supplierNetField = document.querySelector('#supplierNetField');
+    if (!supplierNetField) {
+      supplierNetField = document.createElement('div');
+      supplierNetField.id = 'supplierNetField';
+      supplierNetField.className = 'field payment-terms-field';
+      supplierNetField.innerHTML = `
+        <label for="costNetDays">Supplier Net</label>
+        <input id="costNetDays" type="text" class="cell-input" data-kind="project" data-field="costNetDays">
+      `;
+      if (heading) heading.appendChild(supplierNetField);
+      const inp = supplierNetField.querySelector('input');
+      if (inp) {
+        inp.addEventListener('change', () => {
+          state.project.costNetDays = inp.value;
+          rerender();
+        });
+      }
+    }
+    const inp = supplierNetField.querySelector('input');
+    if (inp) inp.value = state.project.costNetDays ?? 30;
   }
 
   const headMonths = isYears
@@ -1335,6 +1383,7 @@ function exportToExcel() {
     ['Quoted Lead Time (months)', clampNumber(state.project.quotedLeadTimeMonths)],
     ['Lead Time Unit', state.project.leadTimeUnit || 'months'],
     ['Net Days',               clampNumber(state.project.netDays)],
+    ['Supplier Net',          clampNumber(state.project.costNetDays)],
     [],
     ['MILESTONES'],
     ['Code', 'Label', 'Percent (%)', 'Invoice Month', `Revenue (${currency})`],
@@ -1473,6 +1522,7 @@ function importFromExcel(file) {
       if (lookup['Project Start Month']) newProject.projectStartMonth = String(lookup['Project Start Month']);
       if (lookup['Quoted Lead Time (months)'] !== undefined) newProject.quotedLeadTimeMonths = Number(lookup['Quoted Lead Time (months)']) || 0;
       if (lookup['Net Days'] !== undefined) newProject.netDays = Number(lookup['Net Days']) || 0;
+      if (lookup['Supplier Net'] !== undefined) newProject.costNetDays = Number(lookup['Supplier Net']) || 0;
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ Find section start rows Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       let msHeaderRow = -1, costHeaderRow = -1, plannedHeaderRow = -1;
@@ -1927,8 +1977,8 @@ function openUserGuideInNewTab() {
 // so rerender() is NOT called on every keystroke Ã¢â‚¬â€ prevents focus loss.
 // NUMERIC fields keep 'input' so numbers and charts update live.
 
-const TEXT_FIELDS = new Set(['label', 'code', 'currency', 'convertToCurrency', 'contractCurrency', 'netDays', 'percent', 'conversionRate', 'contractFxRate', 'totalCost']);
-const NUMERIC_TEXT_FIELDS = new Set(['contractValue', 'quotedLeadTimeMonths', 'netDays', 'percent', 'conversionRate', 'contractFxRate']);
+const TEXT_FIELDS = new Set(['label', 'code', 'currency', 'convertToCurrency', 'contractCurrency', 'netDays', 'costNetDays', 'percent', 'conversionRate', 'contractFxRate', 'totalCost']);
+const NUMERIC_TEXT_FIELDS = new Set(['contractValue', 'quotedLeadTimeMonths', 'netDays', 'costNetDays', 'percent', 'conversionRate', 'contractFxRate']);
 
 function handleFieldUpdate(target, callRerender = true) {
   const kind = target.dataset.kind;
@@ -2405,13 +2455,6 @@ if (dom.resetDefaultsTopBtn) {
 if (dom.setDefaultsBtn) {
   dom.setDefaultsBtn.addEventListener('click', () => {
     saveCurrentAsDefault();
-  });
-}
-
-if (dom.progressInputModeSelect) {
-  dom.progressInputModeSelect.addEventListener('change', () => {
-    state.project.progressInputMode = dom.progressInputModeSelect.value;
-    rerender();
   });
 }
 
