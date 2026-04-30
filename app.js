@@ -975,10 +975,33 @@ function renderProgressGrid(model) {
   const isValueMode = state.project.progressInputMode === 'value';
   const progressMonths = model.months.slice(0, leadTime);
 
-  // Render progress input mode toggle in section heading
+  // Render progress input mode toggle and Supplier Net in section heading
+  // (same pattern as milestone Net Days injected into milestone-actions)
   const section = dom.progressGrid.closest('section');
   if (section) {
-    const heading = section.querySelector('.section-heading');
+    const actions = section.querySelector('.expenditure-actions');
+
+    // Supplier Net field (prepend so it appears first, like milestone Net Days)
+    let supplierNetField = document.querySelector('#supplierNetField');
+    if (!supplierNetField) {
+      supplierNetField = document.createElement('div');
+      supplierNetField.id = 'supplierNetField';
+      supplierNetField.className = 'field payment-terms-field';
+      supplierNetField.innerHTML = `
+        <label for="costNetDays">Supplier Net</label>
+        <input id="costNetDays" type="text" class="cell-input" data-kind="project" data-field="costNetDays">
+      `;
+      if (actions) actions.prepend(supplierNetField);
+      const inp = supplierNetField.querySelector('input');
+      if (inp) {
+        inp.addEventListener('change', () => {
+          state.project.costNetDays = inp.value;
+          rerender();
+        });
+      }
+    }
+    const inp = supplierNetField.querySelector('input');
+    if (inp) inp.value = state.project.costNetDays ?? 30;
 
     // Progress input mode select
     if (!dom.progressInputModeSelect) {
@@ -990,7 +1013,7 @@ function renderProgressGrid(model) {
         <option value="percent">Cumulative %</option>
         <option value="value">Cost Values</option>
       `;
-      if (heading) heading.appendChild(sel);
+      if (actions) actions.appendChild(sel);
       sel.addEventListener('change', () => {
         state.project.progressInputMode = sel.value;
         rerender();
@@ -998,28 +1021,6 @@ function renderProgressGrid(model) {
       dom.progressInputModeSelect = sel;
     }
     dom.progressInputModeSelect.value = state.project.progressInputMode || 'percent';
-
-    // Supplier Net field
-    let supplierNetField = document.querySelector('#supplierNetField');
-    if (!supplierNetField) {
-      supplierNetField = document.createElement('div');
-      supplierNetField.id = 'supplierNetField';
-      supplierNetField.className = 'field payment-terms-field';
-      supplierNetField.innerHTML = `
-        <label for="costNetDays">Supplier Net</label>
-        <input id="costNetDays" type="text" class="cell-input" data-kind="project" data-field="costNetDays">
-      `;
-      if (heading) heading.appendChild(supplierNetField);
-      const inp = supplierNetField.querySelector('input');
-      if (inp) {
-        inp.addEventListener('change', () => {
-          state.project.costNetDays = inp.value;
-          rerender();
-        });
-      }
-    }
-    const inp = supplierNetField.querySelector('input');
-    if (inp) inp.value = state.project.costNetDays ?? 30;
   }
 
   const headMonths = isYears

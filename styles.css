@@ -387,7 +387,8 @@ h1 {
   transform: translateY(-1px);
 }
 
-.milestone-actions {
+.milestone-actions,
+.expenditure-actions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -532,7 +533,8 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .milestone-actions {
+  .milestone-actions,
+  .expenditure-actions {
     width: 100%;
     justify-content: space-between;
   }
