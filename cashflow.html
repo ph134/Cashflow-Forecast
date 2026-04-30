@@ -44,14 +44,15 @@
 
     <main class="layout-grid">
       <div class="inputs-section-wrapper">
-        <section class="panel span-12 contract-panel compact-input-panel">
-          <div class="section-heading">
-            <div>
-              <p class="section-kicker">Inputs</p>
-              <h2>Opportunity Information</h2>
-            </div>
-            <button id="resetDefaultsTopBtn" class="ghost-button" type="button" style="font-size:0.78rem;padding:4px 10px;">Reset to Default</button>
+        <div class="section-heading collapsible-heading" data-collapse="inputsContent">
+          <div>
+            <p class="section-kicker">Inputs</p>
+            <h2>Opportunity Information</h2>
           </div>
+          <button id="resetDefaultsTopBtn" class="ghost-button" type="button" style="font-size:0.78rem;padding:4px 10px;">Reset to Default</button>
+        </div>
+        <div id="inputsContent" class="collapsible-content">
+        <section class="panel span-12 contract-panel compact-input-panel">
           <form id="projectForm" class="project-form"></form>
         </section>
 
@@ -116,23 +117,27 @@
           </div>
           <div id="progressGrid" class="progress-grid table-scroll"></div>
         </section>
+        </div>
       </div>
 
       <section class="panel span-12">
-        <div class="section-heading">
+        <div class="section-heading collapsible-heading" data-collapse="estimateContent">
           <div>
             <h2>Cashflow Estimate</h2>
           </div>
         </div>
-        <div id="cashflowEstimate" class="table-scroll"></div>
+        <div id="estimateContent" class="collapsible-content">
+          <div id="cashflowEstimate" class="table-scroll"></div>
+        </div>
       </section>
 
       <section class="panel span-12">
-        <div class="section-heading">
+        <div class="section-heading collapsible-heading" data-collapse="forecastContent">
           <div>
             <h2>Forecast</h2>
           </div>
         </div>
+        <div id="forecastContent" class="collapsible-content">
         <div class="table-scroll">
           <table class="forecast-table">
             <thead id="forecastHead"></thead>
@@ -150,6 +155,7 @@
           <label id="importXlsLabel" class="ghost-button small-export-btn" style="cursor:pointer;margin-left:6px;">Import Excel
             <input id="importXlsBtn" type="file" accept=".xlsx" style="display:none;">
           </label>
+        </div>
         </div>
       </section>
 

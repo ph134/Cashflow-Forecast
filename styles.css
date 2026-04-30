@@ -50,7 +50,9 @@ select {
   background: linear-gradient(135deg, rgba(248, 252, 253, 0.92), rgba(232, 243, 246, 0.84));
   box-shadow: var(--shadow);
   overflow: hidden;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .hero > div:first-child {
@@ -186,6 +188,33 @@ h1 {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 8px;
+}
+
+.collapsible-heading {
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsible-heading::before {
+  content: "▾";
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-right: 4px;
+  transition: transform 0.2s;
+}
+
+.collapsible-heading.collapsed::before {
+  transform: rotate(-90deg);
+}
+
+.collapsible-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.collapsible-content.collapsed {
+  max-height: 0 !important;
+  overflow: hidden;
 }
 
 .compact-heading {

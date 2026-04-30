@@ -2260,6 +2260,18 @@ document.addEventListener('click', (event) => {
     return;
   }
 
+  // Collapsible section headings
+  const collapseHeading = target.closest('.collapsible-heading');
+  if (collapseHeading) {
+    const targetId = collapseHeading.dataset.collapse;
+    const content = document.getElementById(targetId);
+    if (content) {
+      const isCollapsed = content.classList.toggle('collapsed');
+      collapseHeading.classList.toggle('collapsed', isCollapsed);
+    }
+    return;
+  }
+
   if (target.id === 'settingsBtn') {
     if (dom.settingsPopover) {
       dom.settingsPopover.hidden = !dom.settingsPopover.hidden;
