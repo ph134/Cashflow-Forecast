@@ -211,7 +211,11 @@ h1 {
   display: none;
 }
 
-.inputs-section-wrapper.section-collapsed > *:not(.section-heading) {
+.inputs-section-wrapper.section-collapsed > *:not(:first-child) {
+  display: none;
+}
+
+.inputs-section-wrapper.section-collapsed > :first-child > *:not(.section-heading) {
   display: none;
 }
 
