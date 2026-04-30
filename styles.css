@@ -504,6 +504,7 @@ h1 {
 
 .payment-terms-field {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   margin-bottom: 0;
@@ -520,6 +521,7 @@ h1 {
 
 .payment-terms-field input {
   max-width: 50px;
+  width: 50px;
   padding: 3px 6px;
   font-size: 0.74rem;
 }
