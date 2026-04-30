@@ -1008,7 +1008,7 @@ function renderProgressGrid(model) {
       const sel = document.createElement('select');
       sel.id = 'progressInputModeSelect';
       sel.className = 'cell-input';
-      sel.style.cssText = 'width:auto;min-width:120px;font-size:0.74rem;';
+      sel.style.cssText = 'width:auto;min-width:120px;font-size:0.74rem;padding:4px 8px;';
       sel.innerHTML = `
         <option value="percent">Cumulative %</option>
         <option value="value">Cost Values</option>
