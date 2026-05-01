@@ -2,7 +2,6 @@
 const DEFAULT_STATE_KEY = 'cashflow-web-app:default-state:v1';
 const DEFAULTS_VERSION_KEY = 'cashflow-web-app:defaults-version';
 const DEFAULTS_VERSION = '20260423-v7';
-const SNAPSHOT_SCHEMA_VERSION = 1;
 
 function createDefaultState() {
   const starterCostId = crypto.randomUUID();
@@ -160,9 +159,7 @@ const dom = {
   exportXlsBtn: document.querySelector('#exportXlsBtn'),
   importXlsBtn: document.querySelector('#importXlsBtn'),
   setDefaultsBtn: document.querySelector('#setDefaultsBtn'),
-  saveSnapshotBtn: document.querySelector('#saveSnapshotBtn'),
-  loadSnapshotBtn: document.querySelector('#loadSnapshotBtn'),
-  resetDefaultsBtn: document.querySelector('#resetDefaultsBtn'),
+  clearAllTopBtn: document.querySelector('#clearAllTopBtn'),
   resetDefaultsTopBtn: document.querySelector('#resetDefaultsTopBtn'),
   cashflowEstimate: document.querySelector('#cashflowEstimate'),
   userGuideBtn: document.querySelector('#userGuideBtn'),
@@ -173,16 +170,6 @@ const dom = {
   dateFormatSelect: document.querySelector('#dateFormatSelect'),
   progressInputModeSelect: null,
 };
-
-function cloneStateForSnapshot(source) {
-  return {
-    project: { ...(source?.project || {}) },
-    milestones: Array.isArray(source?.milestones) ? source.milestones.map((milestone) => ({ ...milestone })) : [],
-    costs: Array.isArray(source?.costs) ? source.costs.map((cost) => ({ ...cost })) : [],
-    progress: source?.progress && typeof source.progress === 'object' ? JSON.parse(JSON.stringify(source.progress)) : {},
-    progressValues: source?.progressValues && typeof source.progressValues === 'object' ? JSON.parse(JSON.stringify(source.progressValues)) : {},
-  };
-}
 
 function normalizeImportedState(rawState) {
   const defaults = createDefaultState();
@@ -235,18 +222,6 @@ function applyState(nextState) {
   rerender();
 }
 
-function downloadJsonFile(filename, payload) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = objectUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(objectUrl);
-}
-
 function getExportBaseName() {
   const opp = String(state.project.salesforceOpportunity || '').trim();
   const rev = String(state.project.revision || '').trim();
@@ -258,34 +233,20 @@ function getExportBaseName() {
     .trim() || 'cashflow-forecast';
 }
 
-function saveSnapshot() {
-  const safeName = getExportBaseName();
-
-  const payload = {
-    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-    exportedAt: new Date().toISOString(),
-    app: 'cashflow-web-app',
-    state: cloneStateForSnapshot(state),
-  };
-
-  downloadJsonFile(`${safeName}-snapshot.json`, payload);
-}
-
-function loadSnapshotFromFile(file) {
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try {
-      const text = String(event.target?.result || '');
-      const parsed = JSON.parse(text);
-      const rawState = parsed?.state || parsed;
-      const normalized = normalizeImportedState(rawState);
-      applyState(normalized);
-      window.alert('Snapshot loaded successfully.');
-    } catch (error) {
-      window.alert(`Snapshot load failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
-  reader.readAsText(file);
+function clearAll() {
+  if (!window.confirm('Clear all data and start fresh? This cannot be undone.')) {
+    return;
+  }
+  try {
+    localStorage.removeItem('cashflow-web-app:state:v1');
+    localStorage.removeItem('cashflow-web-app:state:v2');
+    localStorage.removeItem('cashflow-web-app:state:v3');
+    localStorage.setItem(DEFAULTS_VERSION_KEY, DEFAULTS_VERSION);
+  } catch {
+    // Ignore storage errors
+  }
+  const fresh = createDefaultState();
+  applyState(fresh);
 }
 
 function resetToDefaults() {
@@ -2452,24 +2413,9 @@ if (dom.importXlsBtn) {
   });
 }
 
-if (dom.saveSnapshotBtn) {
-  dom.saveSnapshotBtn.addEventListener('click', () => {
-    saveSnapshot();
-  });
-}
-
-if (dom.loadSnapshotBtn) {
-  dom.loadSnapshotBtn.addEventListener('change', (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    loadSnapshotFromFile(file);
-    event.target.value = '';
-  });
-}
-
-if (dom.resetDefaultsBtn) {
-  dom.resetDefaultsBtn.addEventListener('click', () => {
-    resetToDefaults();
+if (dom.clearAllTopBtn) {
+  dom.clearAllTopBtn.addEventListener('click', () => {
+    clearAll();
   });
 }
 

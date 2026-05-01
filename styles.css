@@ -339,6 +339,12 @@ h1 {
 
 .contract-panel .section-heading {
   margin-bottom: 4px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.contract-panel .section-heading > div:first-child {
+  margin-right: auto;
 }
 
 .project-form .table-scroll {

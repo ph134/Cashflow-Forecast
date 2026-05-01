@@ -50,7 +50,13 @@
               <p class="section-kicker">Inputs</p>
               <h2>Opportunity Information</h2>
             </div>
-            <button id="resetDefaultsTopBtn" class="ghost-button" type="button" style="font-size:0.78rem;padding:4px 10px;">Reset to Default</button>
+            <button id="clearAllTopBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Clear All</button>
+            <button id="resetDefaultsTopBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Reset to Default</button>
+            <button id="setDefaultsBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Set As Default</button>
+            <button id="exportXlsBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Export Excel</button>
+            <label id="importXlsLabel" class="ghost-button" style="cursor:pointer;font-size:0.75rem;padding:3px 7px;">Import Excel
+              <input id="importXlsBtn" type="file" accept=".xlsx" style="display:none;">
+            </label>
           </div>
           <form id="projectForm" class="project-form"></form>
         </section>
@@ -139,18 +145,7 @@
             <tbody id="forecastBody"></tbody>
           </table>
         </div>
-        <div class="export-btn-row">
-          <button id="resetDefaultsBtn" class="ghost-button small-export-btn" type="button">Reset Defaults</button>
-          <button id="setDefaultsBtn" class="ghost-button small-export-btn" type="button">Set As Default</button>
-          <button id="saveSnapshotBtn" class="ghost-button small-export-btn" type="button">Save Snapshot</button>
-          <label id="loadSnapshotLabel" class="ghost-button small-export-btn" style="cursor:pointer;margin-left:6px;">Load Snapshot
-            <input id="loadSnapshotBtn" type="file" accept=".json,application/json" style="display:none;">
-          </label>
-          <button id="exportXlsBtn" class="ghost-button small-export-btn" type="button">Export Excel</button>
-          <label id="importXlsLabel" class="ghost-button small-export-btn" style="cursor:pointer;margin-left:6px;">Import Excel
-            <input id="importXlsBtn" type="file" accept=".xlsx" style="display:none;">
-          </label>
-        </div>
+
       </section>
 
       <section class="panel span-7 hmh-slab chart-slab">
