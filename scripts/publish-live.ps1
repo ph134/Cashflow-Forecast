@@ -48,6 +48,10 @@ if ($content -match 'class="version-tag">v(\d+)\.(\d+)\.(\d+)<') {
   $new = "v$major.$minor.$patch"
   $content = $content -replace [regex]::Escape("version-tag"">$old<"), "version-tag"">$new<"
   Set-Content $indexFile $content -NoNewline
+  # Also update cashflow.html so it stays in sync
+  $cfContent = Get-Content $cashflowFile -Raw
+  $cfContent = $cfContent -replace [regex]::Escape("version-tag"">$old<"), "version-tag"">$new<"
+  Set-Content $cashflowFile $cfContent -NoNewline
   Write-Host "Version bumped: $old -> $new" -ForegroundColor Yellow
   git add $indexFile $cashflowFile
   git commit -m "$new"
