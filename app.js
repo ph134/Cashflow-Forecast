@@ -630,8 +630,12 @@ function renderProjectForm(model) {
       <input class="cell-input" type="text" data-kind="project" data-field="salesforceOpportunity" value="${state.project.salesforceOpportunity || ''}" placeholder="Opp Number">
     </div>
     <div class="timeline-field revision-field">
-      <label class="inline-note" style="display:block;margin-bottom:6px;">Revision</label>
-      <input class="cell-input" type="text" data-kind="project" data-field="revision" value="${state.project.revision || ''}" placeholder="e.g. Rev A">
+      <label class="inline-note" style="display:block;margin-bottom:6px;">Rev</label>
+      <input class="cell-input" type="text" data-kind="project" data-field="revision" value="${state.project.revision || ''}" placeholder="e.g. A">
+    </div>
+    <div class="timeline-field">
+      <label class="inline-note" style="display:block;margin-bottom:6px;">Opportunity Name</label>
+      <input class="cell-input" type="text" data-kind="project" data-field="opportunityName" value="${state.project.opportunityName || ''}" placeholder="Opportunity Name">
     </div>
     <div class="timeline-field">
       <label class="inline-note" style="display:block;margin-bottom:6px;">Quoted lead time</label>
@@ -644,13 +648,7 @@ function renderProjectForm(model) {
       </div>
     </div>
     <div class="timeline-field">
-      <label class="inline-note" style="display:block;margin-bottom:6px;">Opportunity Name</label>
-      <input class="cell-input" type="text" data-kind="project" data-field="opportunityName" value="${state.project.opportunityName || ''}" placeholder="Opportunity Name">
-    </div>
-    <div class="timeline-field" style="grid-column: 2;">
-    </div>
-    <div class="timeline-field">
-      <label class="inline-note" style="display:block;margin-bottom:6px;">Project start month</label>
+      <label class="inline-note" style="display:block;margin-bottom:6px;">Project start</label>
       <input class="cell-input" type="month" data-kind="project" data-field="projectStartMonth" value="${state.project.projectStartMonth}">
     </div>
   `;
@@ -717,20 +715,49 @@ function renderHealth(model) {
   });
 
   // Check Cost Integrity
-  const allCostsTracked = state.costs.length > 0 && state.costs.every((cost) => {
-    const progressRow = state.progress[cost.id];
-    return Array.isArray(progressRow) && progressRow.length > 0;
-  });
-  const costAlertText = state.costs.length === 0
-    ? 'No cost elements defined.'
-    : allCostsTracked
-      ? `All ${state.costs.length} cost element(s) are properly tracked in the schedule.`
-      : 'Some cost elements are missing progress data.';
+  const isValueMode = state.project.progressInputMode === 'value';
+  const issues = [];
 
+  if (state.costs.length === 0) {
+    issues.push('No cost elements defined.');
+  } else {
+    const contractConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
+    const totalCostElements = model.costRows.reduce((s, row) => s + row.convertedTotal, 0);
+
+    if (contractConverted > 0) {
+      const diff = Math.abs(totalCostElements - contractConverted);
+      const tolerance = contractConverted * 0.005;
+      if (diff > Math.max(tolerance, 0.01)) {
+        const pct = ((totalCostElements / contractConverted) * 100).toFixed(1);
+        issues.push(`Cost elements total ${pct}% of contract value.`);
+      }
+    }
+
+    const zeroCosts = model.costRows.filter((row) => row.convertedTotal === 0);
+    if (zeroCosts.length > 0) {
+      issues.push(`${zeroCosts.length} cost element(s) have zero total cost.`);
+    }
+
+    model.costRows.forEach((row) => {
+      if (row.convertedTotal === 0) return;
+      const scheduledTotal = row.monthlyCost.reduce((s, v) => s + v, 0);
+      const diff = Math.abs(scheduledTotal - row.convertedTotal);
+      const tolerance = row.convertedTotal * 0.005;
+
+      if (diff > Math.max(tolerance, 0.01)) {
+        const pct = ((scheduledTotal / row.convertedTotal) * 100).toFixed(1);
+        issues.push(`"${row.label}": scheduled ${isValueMode ? 'values' : 'progress'} covers ${pct}% of its total.`);
+      }
+    });
+  }
+
+  const costIntegrityOk = issues.length === 0 && state.costs.length > 0;
   cards.push({
-    tone: state.costs.length === 0 ? 'warn' : allCostsTracked ? 'good' : 'bad',
+    tone: costIntegrityOk ? 'good' : state.costs.length === 0 ? 'warn' : 'bad',
     title: 'Cost Integrity',
-    text: costAlertText,
+    text: costIntegrityOk
+      ? `All ${state.costs.length} cost element(s) fully account for contract value.`
+      : issues.join(' '),
   });
 
   cards.push({

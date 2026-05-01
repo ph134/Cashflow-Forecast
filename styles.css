@@ -324,7 +324,7 @@ h1 {
 
 .project-meta-grid {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 0.6fr auto 2fr 1fr 1fr;
   gap: 6px;
   margin-bottom: 4px;
 }
