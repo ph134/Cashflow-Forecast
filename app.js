@@ -1596,7 +1596,9 @@ function importFromExcel(file) {
       // We derive cumulative progress % from each row relative to total cost.
       const newProgress = {};
       if (plannedHeaderRow >= 0 && newCosts.length) {
-        const monthCount = getHorizonMonths();
+        // Count months from the header row instead of state (which hasn't been updated yet)
+        const headerRow = rows[plannedHeaderRow + 1] || [];
+        const monthCount = Math.max(0, headerRow.length - 2); // subtract label + total columns
         let i = plannedHeaderRow + 2; // skip section title + header row
         newCosts.forEach((cost) => {
           if (i >= rows.length) return;
