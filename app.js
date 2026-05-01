@@ -1283,7 +1283,9 @@ function renderChart(model) {
   const lineDots = chartValues.map((value, index) => {
     const x = padding.left + index * stepX + stepX / 2;
     const y = yForValue(value);
-    return `<circle cx="${x}" cy="${y}" r="4.5" fill="#1F8AB8"></circle>`;
+    const label = chartLabels[index] || '';
+    const formatted = formatNumber(value);
+    return `<circle cx="${x}" cy="${y}" r="4.5" fill="#1F8AB8"><title>${label}: ${formatted}</title></circle>`;
   }).join('');
 
   const xLabels = chartLabels.map((label, index) => {
