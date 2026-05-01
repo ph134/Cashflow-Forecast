@@ -1552,9 +1552,9 @@ function importFromExcel(file) {
       // Ã¢â€â‚¬Ã¢â€â‚¬ Milestones Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       const newMilestones = [];
       if (msHeaderRow >= 0) {
-        // Skip the section title row and the header row (Code, Label, ...)
         let i = msHeaderRow + 2;
-        while (i < rows.length && rows[i][0] !== '' && rows[i][0] !== undefined) {
+        const msEnd = costHeaderRow >= 0 ? costHeaderRow : rows.length;
+        while (i < msEnd) {
           const [code, label, percent, invoiceMonth] = rows[i];
           if (code || label) {
             newMilestones.push({
@@ -1573,7 +1573,8 @@ function importFromExcel(file) {
       const newCosts = [];
       if (costHeaderRow >= 0) {
         let i = costHeaderRow + 2;
-        while (i < rows.length && rows[i][0] !== '' && rows[i][0] !== undefined) {
+        const costEnd = plannedHeaderRow >= 0 ? plannedHeaderRow : rows.length;
+        while (i < costEnd) {
           const [label, totalCost, currency, convertToCurrency, fxRate] = rows[i];
           if (label) {
             newCosts.push({
