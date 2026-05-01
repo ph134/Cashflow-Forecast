@@ -24,8 +24,16 @@ if ($dirty) {
   throw "Working tree has uncommitted changes. Commit or stash them first."
 }
 
+# --- Sync cashflow.html -> index.html ---
+$repoRoot = git rev-parse --show-toplevel
+$cashflowFile = Join-Path $repoRoot "cashflow.html"
+$indexFile = Join-Path $repoRoot "index.html"
+if (Test-Path $cashflowFile) {
+  Copy-Item $cashflowFile $indexFile -Force
+  Write-Host "Synced cashflow.html -> index.html" -ForegroundColor Green
+}
+
 # --- Auto-increment version in index.html ---
-$indexFile = Join-Path (git rev-parse --show-toplevel) "index.html"
 $content = Get-Content $indexFile -Raw
 if ($content -match 'class="version-tag">v(\d+)\.(\d+)\.(\d+)<') {
   [int]$major = $Matches[1]
@@ -41,7 +49,7 @@ if ($content -match 'class="version-tag">v(\d+)\.(\d+)\.(\d+)<') {
   $content = $content -replace [regex]::Escape("version-tag"">$old<"), "version-tag"">$new<"
   Set-Content $indexFile $content -NoNewline
   Write-Host "Version bumped: $old -> $new" -ForegroundColor Yellow
-  git add $indexFile
+  git add $indexFile $cashflowFile
   git commit -m "$new"
 } else {
   Write-Host "No version tag found in index.html, skipping bump." -ForegroundColor DarkYellow
