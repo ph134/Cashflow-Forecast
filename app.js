@@ -2538,9 +2538,11 @@ function computeTerminationFee() {
   let cumRevenue = 0;
   let cumCost = 0;
 
+  // Use unshifted costs (Planned Expenditures) not forecast (shifted by Supplier Net)
   for (let i = 0; i < months.length; i++) {
     cumRevenue += model.revenueByMonth[i] || 0;
-    cumCost += model.monthlyCost[i] || 0;
+    const monthCostUnshifted = model.costRows.reduce((s, row) => s + (row.monthlyCost[i] || 0), 0);
+    cumCost += monthCostUnshifted;
     const costsWithMarkup = cumCost * (1 + markupPct);
     const windDownTotal = windDownMonthlyCost * windDownMonths;
     const terminationFee = Math.max(0, costsWithMarkup + windDownTotal - cumRevenue);
@@ -2570,30 +2572,71 @@ function renderTerminationFee() {
 }
 
 function renderTerminationTable(model, rows) {
-  const headerCells = rows.map((r) => `<th>${formatMonthLabel(r.month)}</th>`).join('');
-  const cumRevCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumRevenue)}</td>`).join('');
-  const cumCostCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumCost)}</td>`).join('');
-  const markupCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.costsWithMarkup)}</td>`).join('');
-  const windDownCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.windDownTotal)}</td>`).join('');
-  const feeCells = rows.map((r) => {
-    const cls = r.terminationFee > 0 ? 'currency-cell negative' : 'currency-cell';
-    return `<td class="${cls}" style="font-weight:600;">${formatCurrency(r.terminationFee)}</td>`;
-  }).join('');
+  const yearly = isYearsMode();
 
-  dom.terminationSchedule.innerHTML = `
-    <table class="data-table forecast-table">
-      <thead>
-        <tr><th>Period</th>${headerCells}</tr>
-      </thead>
-      <tbody>
-        <tr><td class="row-label">Cum. Revenue Received</td>${cumRevCells}</tr>
-        <tr><td class="row-label">Cum. Costs Incurred</td>${cumCostCells}</tr>
-        <tr><td class="row-label">Costs + Markup</td>${markupCells}</tr>
-        <tr><td class="row-label">Wind-down Cost</td>${windDownCells}</tr>
-        <tr class="total-row"><td class="row-label"><strong>Termination Fee</strong></td>${feeCells}</tr>
-      </tbody>
-    </table>
-  `;
+  if (yearly) {
+    const numYears = Math.ceil(rows.length / 12);
+    const yearHeaders = Array.from({ length: numYears }, (_, i) => {
+      const startMonth = model.months[i * 12];
+      return `<th>Y${i + 1}<div class="inline-note">${startMonth ? formatMonthLabel(startMonth) : ''}</div></th>`;
+    }).join('');
+
+    // For yearly: take the last month of each year chunk for cumulative values
+    const yearRows = [];
+    for (let y = 0; y < numYears; y++) {
+      const lastIdx = Math.min((y + 1) * 12 - 1, rows.length - 1);
+      yearRows.push(rows[lastIdx]);
+    }
+
+    const cumRevCells = yearRows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumRevenue)}</td>`).join('');
+    const cumCostCells = yearRows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumCost)}</td>`).join('');
+    const markupCells = yearRows.map((r) => `<td class="currency-cell">${formatCurrency(r.costsWithMarkup)}</td>`).join('');
+    const windDownCells = yearRows.map((r) => `<td class="currency-cell">${formatCurrency(r.windDownTotal)}</td>`).join('');
+    const feeCells = yearRows.map((r) => {
+      const cls = r.terminationFee > 0 ? 'currency-cell negative' : 'currency-cell';
+      return `<td class="${cls}" style="font-weight:600;">${formatCurrency(r.terminationFee)}</td>`;
+    }).join('');
+
+    dom.terminationSchedule.innerHTML = `
+      <table class="data-table forecast-table">
+        <thead>
+          <tr><th>Period</th>${yearHeaders}</tr>
+        </thead>
+        <tbody>
+          <tr><td class="row-label">Cum. Revenue Received</td>${cumRevCells}</tr>
+          <tr><td class="row-label">Cum. Costs Incurred</td>${cumCostCells}</tr>
+          <tr><td class="row-label">Costs + Markup</td>${markupCells}</tr>
+          <tr><td class="row-label">Wind-down Cost</td>${windDownCells}</tr>
+          <tr class="total-row"><td class="row-label"><strong>Termination Fee</strong></td>${feeCells}</tr>
+        </tbody>
+      </table>
+    `;
+  } else {
+    const headerCells = rows.map((r) => `<th>${formatMonthLabel(r.month)}</th>`).join('');
+    const cumRevCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumRevenue)}</td>`).join('');
+    const cumCostCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumCost)}</td>`).join('');
+    const markupCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.costsWithMarkup)}</td>`).join('');
+    const windDownCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.windDownTotal)}</td>`).join('');
+    const feeCells = rows.map((r) => {
+      const cls = r.terminationFee > 0 ? 'currency-cell negative' : 'currency-cell';
+      return `<td class="${cls}" style="font-weight:600;">${formatCurrency(r.terminationFee)}</td>`;
+    }).join('');
+
+    dom.terminationSchedule.innerHTML = `
+      <table class="data-table forecast-table">
+        <thead>
+          <tr><th>Period</th>${headerCells}</tr>
+        </thead>
+        <tbody>
+          <tr><td class="row-label">Cum. Revenue Received</td>${cumRevCells}</tr>
+          <tr><td class="row-label">Cum. Costs Incurred</td>${cumCostCells}</tr>
+          <tr><td class="row-label">Costs + Markup</td>${markupCells}</tr>
+          <tr><td class="row-label">Wind-down Cost</td>${windDownCells}</tr>
+          <tr class="total-row"><td class="row-label"><strong>Termination Fee</strong></td>${feeCells}</tr>
+        </tbody>
+      </table>
+    `;
+  }
 }
 
 function renderTerminationSummary(model, rows) {

@@ -699,11 +699,30 @@ h1 {
   line-height: 1.1;
 }
 
-.forecast-table th:nth-child(n + 3) {
+.forecast-table th:nth-child(n + 2) {
   font-size: 0.74rem;
+  text-align: center;
 }
 
-.forecast-table th:nth-child(n + 3) .inline-note {
+.forecast-table td:nth-child(n + 2) {
+  text-align: right;
+}
+
+.forecast-table .row-label {
+  white-space: nowrap;
+  min-width: 160px;
+  font-weight: 500;
+}
+
+.forecast-table th:first-child,
+.forecast-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+
+.forecast-table th:nth-child(n + 2) .inline-note {
   display: block;
   text-align: center;
   font-size: inherit;
