@@ -28,16 +28,25 @@
         </ul>
       </div>
       <button id="userGuideBtn" class="ghost-button small-export-btn" type="button">User Guide</button>
-      <div style="justify-self:end;align-self:end;position:relative;">
-        <button id="settingsBtn" class="ghost-button small-export-btn" type="button" title="Settings">&#9881;</button>
-        <div id="settingsPopover" class="settings-popover" hidden>
-          <label for="dateFormatSelect" class="settings-label">Date Format</label>
-          <select id="dateFormatSelect" class="cell-input" style="width:100%;font-size:0.74rem;">
-            <option value="MMM YY">MMM YY (Apr 26)</option>
-            <option value="MM/YY">MM/YY (04/26)</option>
-            <option value="MMM YYYY">MMM YYYY (Apr 2026)</option>
-            <option value="MM/YYYY">MM/YYYY (04/2026)</option>
-          </select>
+      <div class="header-actions">
+        <button id="clearAllTopBtn" class="ghost-button small-export-btn" type="button">Clear All</button>
+        <button id="resetDefaultsTopBtn" class="ghost-button small-export-btn" type="button">Reset to Default</button>
+        <button id="setDefaultsBtn" class="ghost-button small-export-btn" type="button">Set As Default</button>
+        <button id="exportXlsBtn" class="ghost-button small-export-btn" type="button">Export Excel</button>
+        <label id="importXlsLabel" class="ghost-button small-export-btn" style="cursor:pointer;">
+          Import Excel
+          <input id="importXlsBtn" type="file" accept=".xlsx" style="display:none;">
+        </label>
+        <div style="position:relative;">
+          <button id="settingsBtn" class="ghost-button small-export-btn" type="button" title="Settings">&#9881;</button>
+          <div id="settingsPopover" class="settings-popover" hidden>
+            <label for="dateFormatSelect" class="settings-label">Date Format</label>
+            <select id="dateFormatSelect" class="cell-input" style="width:100%;font-size:0.74rem;">
+              <option value="MM/DD/YYYY">MM/DD/YYYY (04/15/2026)</option>
+              <option value="DD/MM/YYYY">DD/MM/YYYY (15/04/2026)</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD (2026-04-15)</option>
+            </select>
+          </div>
         </div>
       </div>
     </header>
@@ -55,13 +64,6 @@
               <p class="section-kicker">Inputs</p>
               <h2>Opportunity Information</h2>
             </div>
-            <button id="clearAllTopBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Clear All</button>
-            <button id="resetDefaultsTopBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Reset to Default</button>
-            <button id="setDefaultsBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Set As Default</button>
-            <button id="exportXlsBtn" class="ghost-button" type="button" style="font-size:0.75rem;padding:3px 7px;">Export Excel</button>
-            <label id="importXlsLabel" class="ghost-button" style="cursor:pointer;font-size:0.75rem;padding:3px 7px;">Import Excel
-              <input id="importXlsBtn" type="file" accept=".xlsx" style="display:none;">
-            </label>
           </div>
           <form id="projectForm" class="project-form"></form>
         </section>
@@ -221,13 +223,6 @@
             <label class="inline-note" style="display:block;margin-bottom:6px;">Wind-down monthly cost</label>
             <input id="termWindDownCost" class="cell-input" type="text" value="0" style="max-width:120px;">
           </div>
-          <div class="timeline-field" style="align-self:end;">
-            <label class="inline-note" style="display:block;margin-bottom:6px;">View</label>
-            <select id="termViewMode" class="cell-input" style="max-width:160px;">
-              <option value="table">Table by Month</option>
-              <option value="summary">Summary by Milestone</option>
-            </select>
-          </div>
         </div>
       </section>
 
@@ -249,20 +244,22 @@
         <button id="closeGuideBtn" class="ghost-button small-export-btn" type="button">Close</button>
       </div>
       <div class="guide-modal-body">
-        <p><strong>1. Opportunity Finance Overview</strong></p>
-        <p>Enter opportunity details, contract value, currencies, FX rate, and manual margin.</p>
+        <p><strong>1. Opportunity Information</strong></p>
+        <p>Enter opportunity details, contract value, and currency. Margin is calculated automatically from contract value and total cost elements.</p>
         <p><strong>2. Milestone Schedule</strong></p>
         <p>Add milestones, set percentages and invoice months, and confirm total milestone percent equals 100%.</p>
         <p><strong>3. Cost Elements</strong></p>
-        <p>Enter each cost line, set currency pair and FX rate, and review converted costs.</p>
+        <p>Enter each cost line with currency and FX conversion. Review converted costs.</p>
         <p><strong>4. Planned Expenditures</strong></p>
-        <p>Set cumulative monthly progress by cost element to control cost timing.</p>
+        <p>Set cumulative progress (% or values) by cost element to control cost timing. Cost element total shows red until the breakdown matches.</p>
         <p><strong>5. Cashflow Estimate</strong></p>
         <p>Verify activity timing and review revenue/accrued totals.</p>
         <p><strong>6. Forecast</strong></p>
         <p>Review monthly revenue, cost, and cumulative cashflow values.</p>
         <p><strong>7. Cashflow Chart + Forecast Summary</strong></p>
         <p>Check the cash trend and summary metrics before export.</p>
+        <p><strong>8. Termination Fee Schedule</strong></p>
+        <p>Configure markup %, wind-down period, and review termination fee by month.</p>
       </div>
     </div>
   </div>

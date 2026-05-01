@@ -23,7 +23,7 @@ function createDefaultState() {
       progressInputMode: 'percent',
       costNetDays: 30,
       netDays: 30,
-      dateFormat: 'MMM YY',
+      dateFormat: 'MM/DD/YYYY',
     },
     milestones: [
       {
@@ -360,14 +360,13 @@ function ensureProgressShape() {
 
   for (const cost of state.costs) {
     if (!Array.isArray(state.progress[cost.id])) {
-      // Initialize new cost with 100% completion for all months
-      state.progress[cost.id] = Array.from({ length: horizon }, () => 100);
+      state.progress[cost.id] = Array.from({ length: horizon }, () => 0);
     } else {
       // Adjust length if horizon changed
       const row = state.progress[cost.id];
       if (row.length < horizon) {
         while (row.length < horizon) {
-          row.push(100);
+          row.push(0);
         }
       } else if (row.length > horizon) {
         row.length = horizon;
@@ -425,17 +424,7 @@ function monthKey(date) {
 }
 
 function formatMonthLabel(date) {
-  const fmt = state.project.dateFormat || 'MMM YY';
-  switch (fmt) {
-    case 'MM/YY':
-      return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
-    case 'MMM YYYY':
-      return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
-    case 'MM/YYYY':
-      return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-    default: // 'MMM YY'
-      return new Intl.DateTimeFormat('en-US', { month: 'short', year: '2-digit' }).format(date);
-  }
+  return new Intl.DateTimeFormat('en-US', { month: 'short', year: '2-digit' }).format(date);
 }
 
 function clampNumber(value, fallback = 0) {
@@ -514,7 +503,7 @@ function computeModel() {
   const revenueByMonth = Array.from({ length: horizon }, () => 0);
 
   const milestoneRows = state.milestones.map((milestone) => {
-    const revenueCostCurrency = clampNumber(state.project.contractValue) * (clampPercent(milestone.percent) / 100) * clampNumber(state.project.contractFxRate, 1);
+    const revenueCostCurrency = clampNumber(state.project.contractValue) * (clampPercent(milestone.percent) / 100);
     const paymentDate = parseMonth(milestone.invoiceMonth);
     const receivedDate = addDays(paymentDate, Math.max(0, Math.round(clampNumber(state.project.netDays, 0))));
     const receivedMonth = monthKey(receivedDate);
@@ -620,10 +609,6 @@ function renderProjectForm(model) {
   dom.projectForm.innerHTML = '';
 
   // Ã¢â€â‚¬Ã¢â€â‚¬ Contract row (table-style, mirrors cost elements) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  const contractFxRate = state.project.contractFxRate ?? 1;
-  const contractRateIsManual = state.project.contractRateIsManual;
-  const sameCurrency = (state.project.contractCurrency || '').toUpperCase() === (state.project.convertToCurrency || '').toUpperCase();
-  const fxBadge = `<span class="rate-badge auto" title="Live rate from open.er-api.com">auto avg: ${Number(contractFxRate).toFixed(6).replace(/\.?0+$/, '')}</span>`;
   const currencySelect = (fieldName, selected) => {
     const options = CURRENCY_OPTIONS.map((curr) => `<option value="${curr}" ${curr === selected ? 'selected' : ''}>${curr}</option>`).join('');
     return `<select class="cell-input" data-kind="project" data-field="${fieldName}" style="max-width:110px;">${options}</select>`;
@@ -667,10 +652,7 @@ function renderProjectForm(model) {
       <thead>
         <tr>
           <th>Contract value</th>
-          <th>Contract currency</th>
-          <th>Convert to</th>
-          <th>FX Rate</th>
-          <th>Converted value</th>
+          <th>Currency</th>
           <th>Margin</th>
         </tr>
       </thead>
@@ -678,13 +660,6 @@ function renderProjectForm(model) {
         <tr>
           <td class="number-cell"><input class="cell-input" type="text" data-kind="project" data-field="contractValue" value="${formatNumberFixed2(clampNumber(state.project.contractValue, 0))}"></td>
           <td>${currencySelect('contractCurrency', (state.project.contractCurrency || 'USD').toUpperCase())}</td>
-          <td>${currencySelect('convertToCurrency', (state.project.convertToCurrency || 'USD').toUpperCase())}</td>
-          <td style="white-space:nowrap;">
-            <input class="cell-input" type="text" data-kind="project" data-field="contractFxRate" value="${contractFxRate}" style="max-width:120px;">
-            ${fxBadge}
-            <button class="ghost-button" style="padding:4px 8px;font-size:0.78rem;" type="button" data-kind="reset-contract-fx-rate" title="Reset to 3-month average">&#x21ba;</button>
-          </td>
-          <td class="currency-cell ${sameCurrency ? 'muted-cell' : 'converted-value'}">${formatCurrency(clampNumber(state.project.contractValue) * clampNumber(contractFxRate, 1), state.project.convertToCurrency)}</td>
           <td class="number-cell" id="calculatedMarginCell" style="font-weight:600;">—</td>
         </tr>
       </tbody>
@@ -820,7 +795,7 @@ function renderMilestones(model) {
       <td><input class="cell-input" data-kind="milestone" data-id="${milestone.id}" data-field="label" value="${milestone.label}"></td>
       <td class="percent-cell"><input class="cell-input" type="text" data-kind="milestone" data-id="${milestone.id}" data-field="percent" value="${milestone.percent}"></td>
       <td><input class="cell-input" type="month" data-kind="milestone" data-id="${milestone.id}" data-field="invoiceMonth" value="${milestone.invoiceMonth}"></td>
-      <td class="currency-cell converted-value">${formatCurrency(milestone.revenueCostCurrency, state.project.convertToCurrency)}</td>
+      <td class="currency-cell">${formatCurrency(milestone.revenueCostCurrency, state.project.contractCurrency)}</td>
       <td><button class="remove-button" type="button" data-kind="remove-milestone" data-id="${milestone.id}">Remove</button></td>
     `;
     dom.milestonesBody.appendChild(row);
@@ -829,8 +804,8 @@ function renderMilestones(model) {
 
 function renderCashflowEstimate(model) {
   if (!dom.cashflowEstimate) return;
-  const contractValueConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
-  const currency = state.project.convertToCurrency || 'USD';
+  const contractValueConverted = clampNumber(state.project.contractValue);
+  const currency = state.project.contractCurrency || 'USD';
   const horizon = model.months.length;
   const yearly = isYearsMode();
 
@@ -1095,11 +1070,16 @@ function renderProgressGrid(model) {
       }
     }
 
+    // Check if breakdown sums to total
+    const breakdownSum = costRow.monthlyCost.reduce((s, v) => s + v, 0);
+    const isBalanced = Math.abs(breakdownSum - costRow.convertedTotal) < 0.01;
+    const valueStyle = isBalanced ? '' : ' style="color:var(--danger,#e74c3c);"';
+
     return `
       <tr>
         <td>
           <span>${costRow.label}</span>
-          <div class="inline-note">${formatCurrency(costRow.convertedTotal, costRow.convertToCurrency || state.project.convertToCurrency)}</div>
+          <div class="inline-note"${valueStyle}>${formatCurrency(costRow.convertedTotal, costRow.convertToCurrency || state.project.convertToCurrency)}</div>
         </td>
         ${cells}
       </tr>
@@ -1120,15 +1100,15 @@ function renderProgressGrid(model) {
 }
 
 function getCalculatedMargin(model) {
-  const contractValueConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
-  const totalCost = model.totals.totalCost;
-  if (contractValueConverted === 0) return { pct: 0, text: '0.0%' };
-  const pct = ((contractValueConverted - totalCost) / contractValueConverted) * 100;
+  const contractValue = clampNumber(state.project.contractValue);
+  const totalCost = model.costRows.reduce((s, row) => s + row.convertedTotal, 0);
+  if (contractValue === 0) return { pct: 0, text: '0.0%' };
+  const pct = ((contractValue - totalCost) / contractValue) * 100;
   return { pct, text: `${pct.toFixed(1)}%` };
 }
 
 function getSummaryItems(model) {
-  const contractValueConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
+  const contractValueConverted = clampNumber(state.project.contractValue);
   const margin = getCalculatedMargin(model);
   const horizon = getHorizonMonths();
 
@@ -1233,11 +1213,22 @@ function renderChartHeader() {
   }
 
   if (dom.chartDate) {
-    const todayLabel = new Date().toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    const today = new Date();
+    const fmt = state.project.dateFormat || 'MMM YY';
+    let todayLabel;
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    switch (fmt) {
+      case 'MM/DD/YYYY':
+        todayLabel = `${mm}/${dd}/${yyyy}`; break;
+      case 'DD/MM/YYYY':
+        todayLabel = `${dd}/${mm}/${yyyy}`; break;
+      case 'YYYY-MM-DD':
+        todayLabel = `${yyyy}-${mm}-${dd}`; break;
+      default:
+        todayLabel = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
     dom.chartDate.textContent = todayLabel;
   }
 }
@@ -1379,8 +1370,6 @@ function exportToExcel() {
     ['Opportunity Name',       state.project.opportunityName || ''],
     ['Contract Value',         clampNumber(state.project.contractValue)],
     ['Contract Currency',      state.project.contractCurrency || ''],
-    ['Convert To Currency',    currency],
-    ['FX Rate',                clampNumber(state.project.contractFxRate, 1)],
     ['Project Start Month',    state.project.projectStartMonth || ''],
     ['Quoted Lead Time (months)', clampNumber(state.project.quotedLeadTimeMonths)],
     ['Lead Time Unit', state.project.leadTimeUnit || 'months'],
@@ -1392,8 +1381,7 @@ function exportToExcel() {
     ['Code', 'Label', 'Percent (%)', 'Invoice Month', `Revenue (${currency})`],
     ...state.milestones.map((ms) => {
       const rev = clampNumber(state.project.contractValue)
-        * (clampPercent(ms.percent) / 100)
-        * clampNumber(state.project.contractFxRate, 1);
+        * (clampPercent(ms.percent) / 100);
       return [ms.code, ms.label, clampPercent(ms.percent), ms.invoiceMonth, rev];
     }),
     [],
@@ -1485,6 +1473,31 @@ function exportToExcel() {
 
   XLSX.utils.book_append_sheet(wb, wsForecast, 'Cashflow Forecast');
 
+  // —— Sheet 3: Termination Fee Schedule ——————————————————————————————————
+  const { rows: termRows, markupPct, windDownMonths, windDownMonthlyCost } = computeTerminationFee();
+  const termAoa = [
+    ['TERMINATION FEE PARAMETERS'],
+    ['Cost Markup %', markupPct * 100],
+    ['Wind-down Months', windDownMonths],
+    ['Wind-down Monthly Cost', windDownMonthlyCost],
+    [],
+    ['TERMINATION FEE SCHEDULE'],
+    ['Month', 'Cumulative Revenue', 'Cumulative Cost', 'Costs + Markup', 'Wind-down Total', 'Termination Fee'],
+    ...termRows.map((r) => [
+      formatMonthLabel(r.month),
+      r.cumRevenue,
+      r.cumCost,
+      r.costsWithMarkup,
+      r.windDownTotal,
+      r.terminationFee,
+    ]),
+  ];
+
+  const wsTerm = XLSX.utils.aoa_to_sheet(termAoa);
+  wsTerm['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
+
+  XLSX.utils.book_append_sheet(wb, wsTerm, 'Termination Fee');
+
   const safeName = getExportBaseName();
   XLSX.writeFile(wb, `${safeName}.xlsx`);
 }
@@ -1520,8 +1533,7 @@ function importFromExcel(file) {
       if (lookup['Opportunity Name'] !== undefined) newProject.opportunityName = String(lookup['Opportunity Name']);
       if (lookup['Contract Value'] !== undefined) newProject.contractValue = Number(lookup['Contract Value']) || 0;
       if (lookup['Contract Currency']) newProject.contractCurrency = String(lookup['Contract Currency']);
-      if (lookup['Convert To Currency']) newProject.convertToCurrency = String(lookup['Convert To Currency']);
-      if (lookup['FX Rate'] !== undefined) newProject.contractFxRate = Number(lookup['FX Rate']) || 1;
+
       if (lookup['Project Start Month']) newProject.projectStartMonth = String(lookup['Project Start Month']);
       if (lookup['Quoted Lead Time (months)'] !== undefined) newProject.quotedLeadTimeMonths = Number(lookup['Quoted Lead Time (months)']) || 0;
       if (lookup['Net Days'] !== undefined) newProject.netDays = Number(lookup['Net Days']) || 0;
@@ -1938,9 +1950,13 @@ function openUserGuideInNewTab() {
       <style>
         body {
           margin: 0;
-          font-family: "Space Grotesk", sans-serif;
-          background: #ffffff;
+          min-height: 100vh;
+          background:
+            radial-gradient(circle at top left, rgba(31, 138, 184, 0.12), transparent 30%),
+            radial-gradient(circle at top right, rgba(31, 138, 184, 0.18), transparent 28%),
+            linear-gradient(180deg, #f4f8fa 0%, #e8eff2 48%, #f0f5f7 100%);
           color: #17212b;
+          font-family: "Space Grotesk", sans-serif;
         }
         .guide-wrap {
           max-width: 900px;
@@ -1948,19 +1964,27 @@ function openUserGuideInNewTab() {
           padding: 0 20px;
         }
         .guide-card {
-          background: #ffffff;
-          border: 1px solid rgba(23, 33, 43, 0.14);
-          border-radius: 16px;
+          background: rgba(248, 252, 253, 0.86);
+          border: 1px solid rgba(23, 33, 43, 0.12);
+          border-radius: 18px;
           padding: 24px;
-          box-shadow: 0 10px 28px rgba(23, 33, 43, 0.08);
+          box-shadow: 0 24px 50px rgba(23, 33, 43, 0.1);
         }
         h1 {
           margin: 0 0 16px;
           font-size: 1.6rem;
+          color: #1F8AB8;
         }
-        p {
+        h2, h3 {
+          color: #166a94;
+        }
+        p, li {
           margin: 0 0 10px;
           line-height: 1.5;
+          color: #5b6773;
+        }
+        strong {
+          color: #17212b;
         }
       </style>
     </head>
@@ -2412,7 +2436,7 @@ dom.addCostBtn.addEventListener('click', () => {
     conversionRate: 1,
     rateIsManual: false,
   });
-  state.progress[id] = Array.from({ length: getHorizonMonths() }, () => 100);
+  state.progress[id] = Array.from({ length: getHorizonMonths() }, () => 0);
   rerender();
   autoFetchRateForCost(id);
 });
@@ -2578,7 +2602,7 @@ function computeTerminationFee() {
 function renderTerminationFee() {
   if (!dom.terminationSchedule) return;
   const { model, rows, markupPct, windDownMonths, windDownMonthlyCost } = computeTerminationFee();
-  const viewMode = dom.termViewMode?.value || 'table';
+  const viewMode = 'table';
 
   if (viewMode === 'summary') {
     renderTerminationSummary(model, rows);
