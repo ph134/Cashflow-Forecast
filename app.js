@@ -855,7 +855,7 @@ function renderCashflowEstimate(model) {
         }
         return `<td></td>`;
       }).join('');
-      return `<tr><td><strong>${milestone.code}</strong></td><td>${milestone.label}</td>${cells}</tr>`;
+      return `<tr><td><strong>${milestone.code}</strong></td><td style="text-align:left;">${milestone.label}</td>${cells}</tr>`;
     }
 
     const cells = Array.from({ length: horizon }, (_, i) => {
@@ -868,7 +868,7 @@ function renderCashflowEstimate(model) {
     return `
       <tr>
         <td><strong>${milestone.code}</strong></td>
-        <td>${milestone.label}</td>
+        <td style="text-align:left;">${milestone.label}</td>
         ${cells}
       </tr>
     `;
@@ -886,6 +886,9 @@ function renderCashflowEstimate(model) {
     return `<td class="number-cell">${formatNumberFixed2(value)}</td>`;
   }).join('');
 
+  const numPeriodCols = yearly ? Math.ceil(horizon / 12) : horizon;
+  const colgroup = `<colgroup><col style="width:60px;"><col style="width:160px;">${'<col>'.repeat(numPeriodCols)}</colgroup>`;
+
   const html = `
     <div class="estimate-header">
       <div class="estimate-info">
@@ -893,6 +896,7 @@ function renderCashflowEstimate(model) {
       </div>
     </div>
     <table class="estimate-table">
+      ${colgroup}
       <thead>
         <tr>
           <th>Code</th>
@@ -1154,6 +1158,18 @@ function renderSummary(model) {
 function renderForecastTable(model) {
   if (!dom.forecastHead || !dom.forecastBody) return;
   const yearly = isYearsMode();
+  const table = dom.forecastHead.closest('table');
+
+  // Add colgroup to match estimate table column widths
+  if (table) {
+    let colgroup = table.querySelector('colgroup');
+    if (!colgroup) {
+      colgroup = document.createElement('colgroup');
+      table.prepend(colgroup);
+    }
+    const numPeriodCols = yearly ? Math.ceil(model.months.length / 12) : model.months.length;
+    colgroup.innerHTML = `<col style="width:60px;"><col style="width:160px;">${'<col>'.repeat(numPeriodCols)}`;
+  }
 
   if (yearly) {
     const numYears = Math.ceil(model.months.length / 12);
@@ -1161,7 +1177,7 @@ function renderForecastTable(model) {
       const startMonth = model.months[i * 12];
       return `<th>Y${i + 1}<div class="inline-note">${startMonth ? formatMonthLabel(startMonth) : ''}</div></th>`;
     }).join('');
-    dom.forecastHead.innerHTML = `<tr><th>Series</th>${yearHeaders}</tr>`;
+    dom.forecastHead.innerHTML = `<tr><th colspan="2">Series</th>${yearHeaders}</tr>`;
 
     const rows = [
       { label: 'Forecast Revenue', values: aggregateByYear(model.revenueByMonth) },
@@ -1171,14 +1187,14 @@ function renderForecastTable(model) {
 
     dom.forecastBody.innerHTML = rows.map((row) => `
       <tr>
-        <td><strong>${row.label}</strong></td>
+        <td colspan="2"><strong>${row.label}</strong></td>
         ${row.values.map((value) => `<td class="${value < 0 ? 'negative' : ''}">${formatNumberFixed2(value)}</td>`).join('')}
       </tr>
     `).join('');
   } else {
     dom.forecastHead.innerHTML = `
       <tr>
-        <th>Series</th>
+        <th colspan="2">Series</th>
         ${model.months.map((month) => `<th>${formatMonthLabel(month)}</th>`).join('')}
       </tr>
     `;
@@ -1191,7 +1207,7 @@ function renderForecastTable(model) {
 
     dom.forecastBody.innerHTML = rows.map((row) => `
       <tr>
-        <td><strong>${row.label}</strong></td>
+        <td colspan="2"><strong>${row.label}</strong></td>
         ${row.values.map((value) => `<td class="${value < 0 ? 'negative' : ''}">${formatNumberFixed2(value)}</td>`).join('')}
       </tr>
     `).join('');

@@ -540,6 +540,10 @@ h1 {
   min-width: 760px;
 }
 
+.forecast-table {
+  table-layout: fixed;
+}
+
 .data-table th,
 .data-table td,
 .forecast-table th,
@@ -582,8 +586,12 @@ h1 {
 .currency-cell,
 .number-cell,
 .percent-cell {
-  min-width: 120px;
   font-size: 0.74rem;
+}
+
+.estimate-table .number-cell,
+.forecast-table .currency-cell {
+  text-align: center;
 }
 
 .inputs-section-wrapper .data-table th:first-child,
@@ -710,7 +718,6 @@ h1 {
 
 .forecast-table .row-label {
   white-space: nowrap;
-  min-width: 160px;
   font-weight: 500;
 }
 
@@ -1131,6 +1138,7 @@ h1 {
   width: 100%;
   border-collapse: collapse;
   min-width: 760px;
+  table-layout: fixed;
 }
 
 .estimate-table th,
@@ -1165,11 +1173,17 @@ h1 {
 }
 
 .estimate-table th:first-child,
-.estimate-table th:nth-child(2),
-.estimate-table td:first-child,
-.estimate-table td:nth-child(2) {
+.estimate-table td:first-child:not([colspan]) {
   text-align: left;
-  min-width: 140px;
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+}
+
+.estimate-table th:nth-child(2) {
+  text-align: left;
+  width: 160px;
+  min-width: 100px;
 }
 
 .estimate-table th:nth-child(n + 3),
@@ -1182,6 +1196,16 @@ h1 {
   background: rgba(240, 248, 252, 0.6);
   font-weight: 600;
   border-top: 2px solid var(--line);
+}
+
+.estimate-table .total-row td,
+.estimate-table .accrued-row td {
+  text-align: center;
+}
+
+.estimate-table .total-row td[colspan],
+.estimate-table .accrued-row td[colspan] {
+  text-align: left;
 }
 
 .estimate-table .accrued-row {
