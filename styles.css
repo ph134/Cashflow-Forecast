@@ -207,6 +207,10 @@ h1 {
   margin-top: 12px;
 }
 
+.layout-grid[hidden] {
+  display: none;
+}
+
 .panel {
   padding: var(--section-pad);
   border: 1px solid var(--line);
