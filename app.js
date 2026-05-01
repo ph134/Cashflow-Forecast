@@ -169,6 +169,13 @@ const dom = {
   settingsPopover: document.querySelector('#settingsPopover'),
   dateFormatSelect: document.querySelector('#dateFormatSelect'),
   progressInputModeSelect: null,
+  cashflowTab: document.querySelector('#cashflowTab'),
+  terminationTab: document.querySelector('#terminationTab'),
+  terminationSchedule: document.querySelector('#terminationSchedule'),
+  termMarkupPct: document.querySelector('#termMarkupPct'),
+  termWindDownMonths: document.querySelector('#termWindDownMonths'),
+  termWindDownCost: document.querySelector('#termWindDownCost'),
+  termViewMode: document.querySelector('#termViewMode'),
 };
 
 function normalizeImportedState(rawState) {
@@ -714,50 +721,26 @@ function renderHealth(model) {
     text: `${riskLevel} - Based on allocation, funding, and timeline factors`,
   });
 
-  // Check Cost Integrity
-  const isValueMode = state.project.progressInputMode === 'value';
-  const issues = [];
+  // Check Cost Integrity: forecast total cost must equal sum of cost element totals
+  const totalCostElements = model.costRows.reduce((s, row) => s + row.convertedTotal, 0);
+  const forecastTotalCost = model.totals.totalCost;
+  const costDiff = Math.abs(forecastTotalCost - totalCostElements);
+  const costTolerance = Math.max(totalCostElements * 0.005, 0.01);
+  const costIntegrityOk = state.costs.length > 0 && costDiff <= costTolerance;
 
+  let costIntegrityText;
   if (state.costs.length === 0) {
-    issues.push('No cost elements defined.');
+    costIntegrityText = 'No cost elements defined.';
+  } else if (costIntegrityOk) {
+    costIntegrityText = `Forecast total cost matches cost elements (${formatCurrency(totalCostElements)}).`;
   } else {
-    const contractConverted = clampNumber(state.project.contractValue) * clampNumber(state.project.contractFxRate, 1);
-    const totalCostElements = model.costRows.reduce((s, row) => s + row.convertedTotal, 0);
-
-    if (contractConverted > 0) {
-      const diff = Math.abs(totalCostElements - contractConverted);
-      const tolerance = contractConverted * 0.005;
-      if (diff > Math.max(tolerance, 0.01)) {
-        const pct = ((totalCostElements / contractConverted) * 100).toFixed(1);
-        issues.push(`Cost elements total ${pct}% of contract value.`);
-      }
-    }
-
-    const zeroCosts = model.costRows.filter((row) => row.convertedTotal === 0);
-    if (zeroCosts.length > 0) {
-      issues.push(`${zeroCosts.length} cost element(s) have zero total cost.`);
-    }
-
-    model.costRows.forEach((row) => {
-      if (row.convertedTotal === 0) return;
-      const scheduledTotal = row.monthlyCost.reduce((s, v) => s + v, 0);
-      const diff = Math.abs(scheduledTotal - row.convertedTotal);
-      const tolerance = row.convertedTotal * 0.005;
-
-      if (diff > Math.max(tolerance, 0.01)) {
-        const pct = ((scheduledTotal / row.convertedTotal) * 100).toFixed(1);
-        issues.push(`"${row.label}": scheduled ${isValueMode ? 'values' : 'progress'} covers ${pct}% of its total.`);
-      }
-    });
+    costIntegrityText = `Forecast total (${formatCurrency(forecastTotalCost)}) does not match cost elements total (${formatCurrency(totalCostElements)}).`;
   }
 
-  const costIntegrityOk = issues.length === 0 && state.costs.length > 0;
   cards.push({
     tone: costIntegrityOk ? 'good' : state.costs.length === 0 ? 'warn' : 'bad',
     title: 'Cost Integrity',
-    text: costIntegrityOk
-      ? `All ${state.costs.length} cost element(s) fully account for contract value.`
-      : issues.join(' '),
+    text: costIntegrityText,
   });
 
   cards.push({
@@ -2524,6 +2507,133 @@ async function autoFetchContractRate() {
     rerender();
   }
 }
+// ── Tab switching ──────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    if (dom.cashflowTab) dom.cashflowTab.hidden = tab !== 'cashflow';
+    if (dom.terminationTab) dom.terminationTab.hidden = tab !== 'termination';
+    if (tab === 'termination') renderTerminationFee();
+  });
+});
+
+// ── Termination Fee inputs ────────────────────────────────────
+[dom.termMarkupPct, dom.termWindDownMonths, dom.termWindDownCost].forEach((input) => {
+  if (input) input.addEventListener('change', () => renderTerminationFee());
+});
+if (dom.termViewMode) {
+  dom.termViewMode.addEventListener('change', () => renderTerminationFee());
+}
+
+function computeTerminationFee() {
+  const model = computeModel();
+  const markupPct = clampNumber(parseFloat(dom.termMarkupPct?.value) || 0, 0) / 100;
+  const windDownMonths = Math.max(0, Math.round(clampNumber(parseFloat(dom.termWindDownMonths?.value) || 0, 0)));
+  const windDownMonthlyCost = clampNumber(parseFloat(String(dom.termWindDownCost?.value || '0').replace(/,/g, '')) || 0, 0);
+
+  const months = model.months;
+  const rows = [];
+  let cumRevenue = 0;
+  let cumCost = 0;
+
+  for (let i = 0; i < months.length; i++) {
+    cumRevenue += model.revenueByMonth[i] || 0;
+    cumCost += model.monthlyCost[i] || 0;
+    const costsWithMarkup = cumCost * (1 + markupPct);
+    const windDownTotal = windDownMonthlyCost * windDownMonths;
+    const terminationFee = Math.max(0, costsWithMarkup + windDownTotal - cumRevenue);
+    rows.push({
+      month: months[i],
+      cumRevenue,
+      cumCost,
+      costsWithMarkup,
+      windDownTotal,
+      terminationFee,
+    });
+  }
+
+  return { model, rows, markupPct, windDownMonths, windDownMonthlyCost };
+}
+
+function renderTerminationFee() {
+  if (!dom.terminationSchedule) return;
+  const { model, rows, markupPct, windDownMonths, windDownMonthlyCost } = computeTerminationFee();
+  const viewMode = dom.termViewMode?.value || 'table';
+
+  if (viewMode === 'summary') {
+    renderTerminationSummary(model, rows);
+  } else {
+    renderTerminationTable(model, rows);
+  }
+}
+
+function renderTerminationTable(model, rows) {
+  const headerCells = rows.map((r) => `<th>${formatMonthLabel(r.month)}</th>`).join('');
+  const cumRevCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumRevenue)}</td>`).join('');
+  const cumCostCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.cumCost)}</td>`).join('');
+  const markupCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.costsWithMarkup)}</td>`).join('');
+  const windDownCells = rows.map((r) => `<td class="currency-cell">${formatCurrency(r.windDownTotal)}</td>`).join('');
+  const feeCells = rows.map((r) => {
+    const cls = r.terminationFee > 0 ? 'currency-cell negative' : 'currency-cell';
+    return `<td class="${cls}" style="font-weight:600;">${formatCurrency(r.terminationFee)}</td>`;
+  }).join('');
+
+  dom.terminationSchedule.innerHTML = `
+    <table class="data-table forecast-table">
+      <thead>
+        <tr><th>Period</th>${headerCells}</tr>
+      </thead>
+      <tbody>
+        <tr><td class="row-label">Cum. Revenue Received</td>${cumRevCells}</tr>
+        <tr><td class="row-label">Cum. Costs Incurred</td>${cumCostCells}</tr>
+        <tr><td class="row-label">Costs + Markup</td>${markupCells}</tr>
+        <tr><td class="row-label">Wind-down Cost</td>${windDownCells}</tr>
+        <tr class="total-row"><td class="row-label"><strong>Termination Fee</strong></td>${feeCells}</tr>
+      </tbody>
+    </table>
+  `;
+}
+
+function renderTerminationSummary(model, rows) {
+  // Show termination fee at each milestone date
+  const summaryRows = model.milestoneRows.map((ms) => {
+    const idx = ms.targetIndex >= 0 ? ms.targetIndex : -1;
+    const row = idx >= 0 && idx < rows.length ? rows[idx] : null;
+    return `
+      <tr>
+        <td>${ms.code}</td>
+        <td>${ms.label}</td>
+        <td>${idx >= 0 ? formatMonthLabel(rows[idx].month) : '—'}</td>
+        <td class="currency-cell">${row ? formatCurrency(row.cumRevenue) : '—'}</td>
+        <td class="currency-cell">${row ? formatCurrency(row.cumCost) : '—'}</td>
+        <td class="currency-cell">${row ? formatCurrency(row.costsWithMarkup) : '—'}</td>
+        <td class="currency-cell">${row ? formatCurrency(row.windDownTotal) : '—'}</td>
+        <td class="currency-cell ${row && row.terminationFee > 0 ? 'negative' : ''}" style="font-weight:600;">${row ? formatCurrency(row.terminationFee) : '—'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  dom.terminationSchedule.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Milestone</th>
+          <th>Date</th>
+          <th>Cum. Revenue</th>
+          <th>Cum. Costs</th>
+          <th>Costs + Markup</th>
+          <th>Wind-down</th>
+          <th>Termination Fee</th>
+        </tr>
+      </thead>
+      <tbody>${summaryRows}</tbody>
+    </table>
+  `;
+}
+
 const contractFrom = (state.project.contractCurrency || '').trim().toUpperCase();
 const contractTo   = (state.project.convertToCurrency || '').trim().toUpperCase();
 if (contractFrom && contractTo && contractFrom !== contractTo && !state.project.contractRateIsManual) {

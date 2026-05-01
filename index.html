@@ -42,7 +42,12 @@
       </div>
     </header>
 
-    <main class="layout-grid">
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="cashflow">Cashflow</button>
+      <button class="tab-btn" data-tab="termination">Termination Fee Schedule</button>
+    </nav>
+
+    <main id="cashflowTab" class="layout-grid">
       <div class="inputs-section-wrapper">
         <section class="panel span-12 contract-panel compact-input-panel">
           <div class="section-heading">
@@ -193,6 +198,46 @@
           </div>
         </div>
         <div id="healthChecks" class="health-list"></div>
+      </section>
+    </main>
+
+    <main id="terminationTab" class="layout-grid" hidden>
+      <section class="panel span-12 compact-input-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Termination Fee Parameters</h2>
+          </div>
+        </div>
+        <div class="term-params-grid">
+          <div class="timeline-field">
+            <label class="inline-note" style="display:block;margin-bottom:6px;">Cost Markup %</label>
+            <input id="termMarkupPct" class="cell-input" type="text" value="10" style="max-width:80px;">
+          </div>
+          <div class="timeline-field">
+            <label class="inline-note" style="display:block;margin-bottom:6px;">Wind-down (months)</label>
+            <input id="termWindDownMonths" class="cell-input" type="text" value="3" style="max-width:80px;">
+          </div>
+          <div class="timeline-field">
+            <label class="inline-note" style="display:block;margin-bottom:6px;">Wind-down monthly cost</label>
+            <input id="termWindDownCost" class="cell-input" type="text" value="0" style="max-width:120px;">
+          </div>
+          <div class="timeline-field" style="align-self:end;">
+            <label class="inline-note" style="display:block;margin-bottom:6px;">View</label>
+            <select id="termViewMode" class="cell-input" style="max-width:160px;">
+              <option value="table">Table by Month</option>
+              <option value="summary">Summary by Milestone</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel span-12">
+        <div class="section-heading">
+          <div>
+            <h2>Termination Fee Schedule</h2>
+          </div>
+        </div>
+        <div id="terminationSchedule" class="table-scroll"></div>
       </section>
     </main>
   </div>

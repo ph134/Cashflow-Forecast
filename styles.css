@@ -39,6 +39,43 @@ select {
   margin: 8px auto 20px;
 }
 
+.tab-bar {
+  display: flex;
+  gap: 0;
+  margin: 10px 0 0;
+  border-bottom: 2px solid var(--line);
+}
+
+.tab-btn {
+  padding: 8px 20px;
+  font-size: 0.88rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover {
+  color: var(--ink);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.term-params-grid {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 12px;
+  align-items: start;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1fr auto;
