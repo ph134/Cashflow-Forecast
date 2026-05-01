@@ -1172,6 +1172,12 @@ h1 {
   min-width: 140px;
 }
 
+.estimate-table th:nth-child(n + 3),
+.estimate-table td:nth-child(n + 3) {
+  text-align: center;
+  min-width: 100px;
+}
+
 .estimate-table .total-row {
   background: rgba(240, 248, 252, 0.6);
   font-weight: 600;
