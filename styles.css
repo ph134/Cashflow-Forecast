@@ -705,7 +705,7 @@ h1 {
 }
 
 .forecast-table td:nth-child(n + 2) {
-  text-align: right;
+  text-align: center;
 }
 
 .forecast-table .row-label {
